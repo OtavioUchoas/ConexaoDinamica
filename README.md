@@ -1,82 +1,95 @@
-# Projeto Base — Web API (.NET 10)
+# ConexaoDinamica — Web API (.NET 10)
 
-Template base para novos projetos de API em C#, com Clean Architecture, autenticação JWT,
-EF Core (PostgreSQL) e uma série de configurações prontas — para não precisar montar tudo do zero.
+Projeto de estudo sobre **configuração de conexões de banco em tempo de execução**.
 
-> Este projeto base **não** inclui Docker nem qualquer configuração de nuvem, por escolha.
+A ideia central: em vez de as connection strings virem de `appsettings.json` ou variáveis de
+ambiente, elas são configuradas por um **AdminCenter** no frontend e persistidas localmente —
+sem reiniciar a aplicação. São duas conexões independentes:
+
+- **PostgreSQL** — dados da aplicação (EF Core)
+- **MongoDB** — logs de auditoria
+
+As configurações ficam num **LiteDB** embarcado, que resolve o problema de origem: é preciso
+guardar a configuração do banco *antes* de existir um banco configurado.
+
+> Sem Docker e sem nuvem, por escolha. Cenário alvo: on-premise, instância única.
 
 ## Arquitetura (4 camadas)
 
 ```
-ConexaoDinamica.API             -> Camada de apresentação (Controllers, Middlewares, Program)
+ConexaoDinamica.API             -> Controllers, Middlewares, Program
 ConexaoDinamica.Application     -> Casos de uso (Services, DTOs, Interfaces, Validators)
 ConexaoDinamica.Domain          -> Entidades e regras de domínio
-ConexaoDinamica.Infrastructure  -> EF Core, Repositórios, DbContext, Migrations, DI
+ConexaoDinamica.Infrastructure  -> EF Core, LiteDB, Repositórios, Migrations, DI
 ```
 
-## O que já vem configurado
+## Estado atual
 
-- **Autenticação JWT** (login + cadastro de usuário com hash de senha)
-- **FluentValidation** com registro automático dos validators
-- **Middleware global de exceções** (`GlobalExceptionHandlingMiddleware`)
-- **Rate limiting** (janela fixa na política `auth`)
-- **CORS** por configuração (`Cors:AllowedOrigins`)
-- **Security headers** (X-Frame-Options, X-Content-Type-Options, X-XSS-Protection)
-- **OpenAPI / Swagger UI** com esquema de segurança Bearer
-- **EF Core + PostgreSQL** (Npgsql) com `AppDbContext`, configurações e migrations
-- **Migração automática** na inicialização (`context.Database.Migrate()`)
+### Pronto
 
-## Como usar este template
+- **Autenticação JWT** com claim de role (`PerfilUsuario`: `Comum` / `Administrador`)
+- **Admin bootstrap (break-glass)** — credenciais em `appsettings` com hash BCrypt, aceita
+  username **ou** email. Não depende do banco de propósito: é o acesso usado para configurar
+  as conexões e para recuperar o acesso caso o Postgres fique indisponível
+- **Store de configuração em LiteDB** (`IConexaoConfigStore`) — singleton com cache em memória
+- **EF Core + PostgreSQL** (Npgsql) com migrations
+- FluentValidation, middleware global de exceções, rate limiting, CORS, security headers,
+  Swagger UI com esquema Bearer
 
-### 1. Instalar como template `dotnet new`
+### Em aberto
 
-Na raiz deste diretório:
+- [ ] `AddDbContext` lendo a connection string do store (hoje ainda lê do `appsettings`)
+- [ ] `IDesignTimeDbContextFactory` — necessário para o `dotnet ef` continuar funcionando
+      quando a connection string sair do `appsettings`
+- [ ] Endpoints do AdminCenter: testar conexão → salvar → aplicar migrations
+- [ ] Middleware de "modo setup" (bloquear rotas enquanto não houver configuração)
+- [ ] Auditoria em MongoDB
+- [ ] Seed do super usuário no Postgres
 
-```bash
-dotnet new install .
-```
+## Rodando
 
-### 2. Criar um projeto novo a partir dele
+1. Configure em `appsettings.json` (ou via `dotnet user-secrets`):
 
-```bash
-dotnet new estudologs -n MinhaApi
-```
+   | Chave | Descrição |
+   |---|---|
+   | `Jwt:Secret` | Chave de assinatura — **32+ caracteres** |
+   | `Jwt:Issuer` / `Jwt:Audience` | Emissor e audiência do token |
+   | `AdminBootstrap:*` | Credenciais do admin (`SenhaHash` em BCrypt) |
+   | `ConnectionStrings:DefaultConnection` | Postgres — temporário, até o AdminCenter assumir |
+   | `Cors:AllowedOrigins` | Origens permitidas do frontend |
+   | `Storage:ConfigDbPath` | Opcional. Padrão: `%LOCALAPPDATA%\ConexaoDinamica\config.db` |
 
-Isso cria a pasta `MinhaApi/` com todos os namespaces, pastas e arquivos renomeados
-de `ConexaoDinamica` para `MinhaApi` automaticamente.
-
-### 3. Atualizar / desinstalar o template
-
-```bash
-dotnet new install . --force   # reinstalar após alterações no template
-dotnet new uninstall .         # remover
-```
-
-## Rodando o projeto gerado
-
-1. Configure `appsettings.json` (ou user-secrets):
-   - `ConnectionStrings:DefaultConnection` — string de conexão do PostgreSQL
-   - `Jwt:Secret` — chave secreta (mínimo recomendado: 32+ caracteres)
-   - `Jwt:Issuer` / `Jwt:Audience`
-   - `Cors:AllowedOrigins` — origens permitidas do frontend
-
-2. Aplicar migrations (ou deixar o `Migrate()` da inicialização cuidar disso):
+2. Rode:
 
    ```bash
-   dotnet ef database update --project MinhaApi.Infrastructure --startup-project MinhaApi.API
-   ```
-
-3. Rodar:
-
-   ```bash
-   dotnet run --project MinhaApi.API
+   dotnet run --project ConexaoDinamica.API
    ```
 
    Swagger em `https://localhost:<porta>/swagger`.
 
-## Endpoints prontos
+> ⚠️ A migração automática do startup está **desativada** — a aplicação precisa subir mesmo sem
+> banco configurado, que é a premissa do projeto. Para aplicar migrations manualmente:
+>
+> ```bash
+> dotnet ef database update --project ConexaoDinamica.Infrastructure --startup-project ConexaoDinamica.API
+> ```
 
-| Método | Rota            | Descrição                    |
-|--------|-----------------|------------------------------|
-| POST   | `/api/v1/login` | Login (retorna JWT)          |
-| POST   | `/api/v1/cadastro` | Cadastro de usuário       |
+## Endpoints
+
+| Método | Rota | Auth | Descrição |
+|--------|------|------|-----------|
+| POST | `/api/v1/login` | — | Login de usuário (Postgres) |
+| POST | `/api/v1/cadastro` | — | Cadastro de usuário |
+| POST | `/api/v1/admin/login` | — | Login do admin bootstrap (username ou email) |
+
+## Notas de implementação
+
+**Por que o store é síncrono.** A lambda do `AddDbContext` é síncrona; expor só métodos `async`
+levaria a bloquear uma chamada assíncrona ali dentro — deadlock esperando acontecer.
+
+**Por que os campos ficam separados.** A configuração guarda `Host`, `Porta`, `Database`,
+`Usuario` e `Senha` em vez da connection string pronta, para o AdminCenter reexibir o formulário
+sem precisar parsear a string. A montagem usa `NpgsqlConnectionStringBuilder`.
+
+**Senha em texto puro.** Decisão consciente para ambiente local de estudo. Para proteger, basta
+criptografar na borda do store (ASP.NET Data Protection) — o contrato não muda.
