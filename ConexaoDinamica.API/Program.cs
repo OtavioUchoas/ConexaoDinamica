@@ -1,10 +1,8 @@
 using ConexaoDinamica.API.Middlewares;
 using ConexaoDinamica.Application.Validador.FluentValidatorExtensions;
-using ConexaoDinamica.Infrastructure.Data.AppDBsContext;
 using ConexaoDinamica.Infrastructure.Data.DependencyInjections;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi;
@@ -94,12 +92,6 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    //context.Database.Migrate();
-}
-
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -128,6 +120,13 @@ app.Use(async (context, next) =>
 });
 
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
+
+// Posição importa. Precisa vir DEPOIS do UseCors: sem os headers de CORS, o
+// navegador descarta a resposta 503 e o frontend nunca enxerga o setupRequired
+// — o sintoma seria um erro de rede genérico em vez do redirecionamento para o
+// AdminCenter. Vem depois do tratador global de exceções (para ficar protegido
+// por ele) e antes da autenticação, já que não depende de identidade.
+app.UseMiddleware<ModoSetupMiddleware>();
 
 app.UseAuthentication();
 

@@ -29,5 +29,15 @@ namespace ConexaoDinamica.Application.Configuracoes
             !string.IsNullOrWhiteSpace(Database) &&
             !string.IsNullOrWhiteSpace(Usuario) &&
             Porta > 0;
+
+        /// <summary>
+        /// Representação segura para log, debug e mensagens de erro: a senha nunca
+        /// aparece. ToString() é chamado implicitamente por logging estruturado e
+        /// interpolação de string, então montar a connection string aqui vazaria a
+        /// credencial sem ninguém perceber.
+        /// A montagem fica na camada de infraestrutura, que conhece o Npgsql.
+        /// </summary>
+        public override string ToString() =>
+            $"{Host}:{Porta}/{Database} (usuario={Usuario}, senha={(string.IsNullOrEmpty(Senha) ? "<vazia>" : "***")})";
     }
 }

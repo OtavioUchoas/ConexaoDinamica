@@ -9,10 +9,20 @@ namespace ConexaoDinamica.Application.AplicationInterfaces.Configuracoes
     /// </summary>
     public interface IConexaoConfigStore
     {
+        // ── Postgres (dados da aplicação) ──────────────────────────────────────
+
         ConexaoPostgresConfig? ObterPostgres();
 
         void SalvarPostgres(ConexaoPostgresConfig config);
 
         bool PostgresConfigurado { get; }
+
+        // ── MongoDB (logs de auditoria) ────────────────────────────────────────
+
+        ConexaoMongoConfig? ObterMongo();
+
+        void SalvarMongo(ConexaoMongoConfig config);
+
+        bool MongoConfigurado { get; }
     }
 }

@@ -20,13 +20,29 @@ namespace ConexaoDinamica.Infrastructure.Data.DependencyInjections
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            // DbContext
-            services.AddDbContext<AppDbContext>(options =>
-                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+            // DbContext — a connection string vem do store e é resolvida a cada
+            // criação de contexto, permitindo trocar a conexão sem reiniciar.
+            services.AddDbContext<AppDbContext>((sp, options) =>
+            {
+                var store = sp.GetRequiredService<IConexaoConfigStore>();
+                var config = store.ObterPostgres();
+
+                // Sem configuração, o contexto é criado assim mesmo e só falha ao
+                // tentar abrir conexão. Lançar aqui derrubaria qualquer resolução
+                // do DI que dependa do contexto, mesmo sem tocar no banco.
+                string? connectionString = config is not null && config.EstaCompleta
+                    ? MontadorConexaoPostgres.Montar(config)
+                    : null;
+
+                options.UseNpgsql(connectionString);
+            });
 
             // Store de configuração (LiteDB) — precisa existir mesmo sem Postgres configurado
             services.AddSingleton(_ => new LiteDatabase(MontarConnectionStringLiteDb(configuration)));
             services.AddSingleton<IConexaoConfigStore, LiteDbConexaoConfigStore>();
+
+            // Casos de uso do AdminCenter
+            services.AddScoped<IConexaoAdminService, ConexaoAdminService>();
 
             // Admin bootstrap (credenciais fora do banco)
             services.Configure<AdminBootstrapOptions>(
@@ -68,5 +84,3 @@ namespace ConexaoDinamica.Infrastructure.Data.DependencyInjections
         }
     }
 }
-
-
