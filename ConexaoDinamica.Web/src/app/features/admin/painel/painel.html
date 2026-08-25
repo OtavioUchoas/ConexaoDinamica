@@ -1,0 +1,96 @@
+<mat-toolbar>
+  <mat-icon>settings</mat-icon>
+  <span class="titulo">AdminCenter</span>
+  <span class="espaco"></span>
+
+  @if (sessao(); as usuario) {
+    <span class="usuario">{{ usuario.nome }} · {{ usuario.perfil }}</span>
+  }
+
+  <button matIconButton aria-label="Recarregar" (click)="carregar()">
+    <mat-icon>refresh</mat-icon>
+  </button>
+  <button matIconButton aria-label="Sair" (click)="sair()">
+    <mat-icon>logout</mat-icon>
+  </button>
+</mat-toolbar>
+
+@if (carregando()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+<main class="conteudo">
+  <h2>Conexões</h2>
+
+  <div class="grade">
+    <mat-card>
+      <mat-card-header>
+        <mat-icon mat-card-avatar>storage</mat-icon>
+        <mat-card-title>PostgreSQL</mat-card-title>
+        <mat-card-subtitle>Dados da aplicação</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (postgres(); as pg) {
+          <p class="destino">{{ pg.host }}:{{ pg.porta }}/{{ pg.database }}</p>
+          <p class="detalhe">usuário: {{ pg.usuario }}</p>
+          <mat-chip-set>
+            <mat-chip highlighted>{{ pg.estaCompleta ? 'Configurado' : 'Incompleto' }}</mat-chip>
+            <mat-chip>{{ pg.senhaDefinida ? 'Com senha' : 'Sem senha' }}</mat-chip>
+          </mat-chip-set>
+        } @else {
+          <p class="vazio">Não configurado.</p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-icon mat-card-avatar>article</mat-icon>
+        <mat-card-title>MongoDB</mat-card-title>
+        <mat-card-subtitle>Trilha de auditoria</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (mongo(); as mg) {
+          <p class="destino">{{ mg.host }}:{{ mg.porta }}/{{ mg.database }}</p>
+          <p class="detalhe">
+            {{ mg.usuario ? 'usuário: ' + mg.usuario : 'sem autenticação' }}
+          </p>
+          <mat-chip-set>
+            <mat-chip highlighted>{{ mg.estaCompleta ? 'Configurado' : 'Incompleto' }}</mat-chip>
+          </mat-chip-set>
+        } @else {
+          <p class="vazio">Não configurado.</p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-icon mat-card-avatar>schema</mat-icon>
+        <mat-card-title>Migrations</mat-card-title>
+        <mat-card-subtitle>Situação do schema</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (migrations(); as mig) {
+          @if (mig.conseguiuConectar) {
+            <p class="detalhe">{{ mig.aplicadas.length }} aplicada(s)</p>
+            <mat-chip-set>
+              @if (mig.pendentes.length === 0) {
+                <mat-chip highlighted>Em dia</mat-chip>
+              } @else {
+                <mat-chip highlighted>{{ mig.pendentes.length }} pendente(s)</mat-chip>
+              }
+            </mat-chip-set>
+          } @else {
+            <p class="vazio">{{ mig.erro }}</p>
+          }
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <p class="nota">
+    Somente leitura por enquanto. Editar as conexões e aplicar migrations entram
+    junto com o assistente de configuração.
+  </p>
+</main>

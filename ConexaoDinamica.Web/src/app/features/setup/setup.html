@@ -1,0 +1,256 @@
+<div class="pagina">
+  <header class="cabecalho">
+    <h1>Configuração inicial</h1>
+    <p>
+      A aplicação não opera até que as duas conexões estejam configuradas.
+      Os passos abaixo dependem uns dos outros, nesta ordem.
+    </p>
+  </header>
+
+  @if (ocupado()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  <mat-stepper orientation="vertical" linear>
+    <!-- 1. Acesso -->
+    <mat-step [completed]="autenticado()" label="Acesso administrativo">
+      <p class="explicacao">
+        O administrador de bootstrap tem credenciais fora do banco — é o único
+        acesso possível antes de existir um banco configurado.
+      </p>
+
+      @if (autenticado()) {
+        <div class="sucesso">
+          <mat-icon>check_circle</mat-icon>
+          <span>Autenticado como administrador.</span>
+        </div>
+      } @else {
+        <form class="formulario" (ngSubmit)="entrar()">
+          <mat-form-field appearance="outline">
+            <mat-label>Usuário ou e-mail</mat-label>
+            <input matInput name="loginAdmin" [(ngModel)]="loginAdmin" required />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Senha</mat-label>
+            <input matInput type="password" name="senhaAdmin" [(ngModel)]="senhaAdmin" required />
+          </mat-form-field>
+
+          @if (erroLogin(); as e) {
+            <div class="erro"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div>
+          }
+
+          <button matButton="filled" type="submit" [disabled]="ocupado()">Entrar</button>
+        </form>
+      }
+
+      <div class="acoes">
+        <button matButton matStepperNext [disabled]="!autenticado()">Continuar</button>
+      </div>
+    </mat-step>
+
+    <!-- 2. PostgreSQL -->
+    <mat-step [completed]="postgresSalvo()" label="PostgreSQL — dados da aplicação">
+      <p class="explicacao">
+        Onde ficam usuários, clientes e pedidos. Você pode testar antes de salvar.
+      </p>
+
+      <div class="campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Host</mat-label>
+          <input matInput name="pgHost" [(ngModel)]="postgres.host" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="estreito">
+          <mat-label>Porta</mat-label>
+          <input matInput type="number" name="pgPorta" [(ngModel)]="postgres.porta" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Banco</mat-label>
+          <input matInput name="pgDatabase" [(ngModel)]="postgres.database" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Usuário</mat-label>
+          <input matInput name="pgUsuario" [(ngModel)]="postgres.usuario" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Senha</mat-label>
+          <input matInput type="password" name="pgSenha" [(ngModel)]="postgres.senha"
+                 autocomplete="new-password" />
+        </mat-form-field>
+      </div>
+
+      @if (testePostgres(); as t) {
+        <div [class]="t.sucesso ? 'sucesso' : 'erro'">
+          <mat-icon>{{ t.sucesso ? 'check_circle' : 'error_outline' }}</mat-icon>
+          <span>
+            {{ t.mensagem }}
+            @if (t.sucesso) {
+              · {{ t.tempoMs }}ms
+              @if (t.versaoServidor) { · versão {{ t.versaoServidor }} }
+            }
+          </span>
+        </div>
+      }
+
+      @if (erroPostgres(); as e) {
+        <div class="erro"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div>
+      }
+
+      <div class="acoes">
+        <button matButton (click)="testarPostgres()" [disabled]="ocupado()">
+          <mat-icon>network_check</mat-icon> Testar conexão
+        </button>
+        <button matButton="filled" (click)="salvarPostgres()" [disabled]="ocupado()">
+          Salvar
+        </button>
+        <button matButton matStepperNext [disabled]="!postgresSalvo()">Continuar</button>
+      </div>
+    </mat-step>
+
+    <!-- 3. MongoDB -->
+    <mat-step [completed]="mongoSalvo()" label="MongoDB — trilha de auditoria">
+      <p class="explicacao">
+        Onde ficam os eventos de auditoria. Instalações locais costumam rodar sem
+        autenticação: nesse caso, deixe usuário e senha em branco.
+      </p>
+
+      <div class="campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Host</mat-label>
+          <input matInput name="mgHost" [(ngModel)]="mongo.host" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="estreito">
+          <mat-label>Porta</mat-label>
+          <input matInput type="number" name="mgPorta" [(ngModel)]="mongo.porta" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Banco</mat-label>
+          <input matInput name="mgDatabase" [(ngModel)]="mongo.database" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Usuário (opcional)</mat-label>
+          <input matInput name="mgUsuario" [(ngModel)]="mongo.usuario" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Senha (opcional)</mat-label>
+          <input matInput type="password" name="mgSenha" [(ngModel)]="mongo.senha"
+                 autocomplete="new-password" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>AuthSource</mat-label>
+          <input matInput name="mgAuthSource" [(ngModel)]="mongo.authSource" />
+          <mat-hint>Banco onde o usuário está cadastrado — normalmente "admin"</mat-hint>
+        </mat-form-field>
+      </div>
+
+      @if (testeMongo(); as t) {
+        <div [class]="t.sucesso ? 'sucesso' : 'erro'">
+          <mat-icon>{{ t.sucesso ? 'check_circle' : 'error_outline' }}</mat-icon>
+          <span>
+            {{ t.mensagem }}
+            @if (t.sucesso) {
+              · {{ t.tempoMs }}ms
+              @if (t.versaoServidor) { · versão {{ t.versaoServidor }} }
+            }
+          </span>
+        </div>
+      }
+
+      @if (erroMongo(); as e) {
+        <div class="erro"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div>
+      }
+
+      <div class="acoes">
+        <button matButton matStepperPrevious>Voltar</button>
+        <button matButton (click)="testarMongo()" [disabled]="ocupado()">
+          <mat-icon>network_check</mat-icon> Testar conexão
+        </button>
+        <button matButton="filled" (click)="salvarMongo()" [disabled]="ocupado()">
+          Salvar
+        </button>
+        <button matButton matStepperNext [disabled]="!mongoSalvo()">Continuar</button>
+      </div>
+    </mat-step>
+
+    <!-- 4. Migrations -->
+    <mat-step [completed]="podeConcluir()" label="Criar o schema">
+      <p class="explicacao">
+        Aplica as migrations no banco configurado e cria o super administrador.
+      </p>
+
+      @if (statusMigrations(); as s) {
+        @if (s.conseguiuConectar) {
+          <mat-chip-set>
+            <mat-chip>{{ s.aplicadas.length }} aplicada(s)</mat-chip>
+            <mat-chip highlighted>{{ s.pendentes.length }} pendente(s)</mat-chip>
+          </mat-chip-set>
+        } @else {
+          <div class="erro">
+            <mat-icon>error_outline</mat-icon><span>{{ s.erro }}</span>
+          </div>
+        }
+      }
+
+      @if (erroMigrations(); as e) {
+        <div class="erro"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div>
+      }
+
+      @if (superUsuario(); as su) {
+        <mat-card class="credencial">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>key</mat-icon>
+            <mat-card-title>Super administrador criado</mat-card-title>
+            <mat-card-subtitle>{{ su.aviso }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <p class="rotulo">E-mail</p>
+            <p class="valor">{{ su.email }}</p>
+
+            <p class="rotulo">Senha provisória</p>
+            <p class="valor senha">{{ su.senhaProvisoria }}</p>
+
+            <button matButton (click)="copiarSenha()">
+              <mat-icon>{{ senhaCopiada() ? 'check' : 'content_copy' }}</mat-icon>
+              {{ senhaCopiada() ? 'Copiada' : 'Copiar senha' }}
+            </button>
+
+            <mat-checkbox [checked]="senhaAnotada()"
+                          (change)="senhaAnotada.set($event.checked)">
+              Anotei a senha em local seguro
+            </mat-checkbox>
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <div class="acoes">
+        <button matButton matStepperPrevious>Voltar</button>
+        <button matButton="filled" (click)="aplicarMigrations()"
+                [disabled]="ocupado() || migrationsAplicadas()">
+          <mat-icon>play_arrow</mat-icon> Aplicar migrations
+        </button>
+        <button matButton matStepperNext [disabled]="!podeConcluir()">Continuar</button>
+      </div>
+    </mat-step>
+
+    <!-- 5. Conclusão -->
+    <mat-step label="Pronto">
+      <div class="sucesso">
+        <mat-icon>check_circle</mat-icon>
+        <span>Configuração concluída. A aplicação está operacional.</span>
+      </div>
+
+      <div class="acoes">
+        <button matButton="filled" (click)="concluir()">Ir para o AdminCenter</button>
+      </div>
+    </mat-step>
+  </mat-stepper>
+</div>
