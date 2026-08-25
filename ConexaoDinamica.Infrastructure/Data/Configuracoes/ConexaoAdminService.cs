@@ -1,8 +1,10 @@
+using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using ConexaoDinamica.Application.AplicationInterfaces.Configuracoes;
 using ConexaoDinamica.Application.Configuracoes;
 using ConexaoDinamica.Application.Dtos.AdminDtos;
 using ConexaoDinamica.Infrastructure.Data.AppDBsContext;
+using ConexaoDinamica.Infrastructure.Data.Seed;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -29,10 +31,14 @@ namespace ConexaoDinamica.Infrastructure.Data.Configuracoes
     public class ConexaoAdminService : IConexaoAdminService
     {
         private readonly IConexaoConfigStore _store;
+        private readonly AdminBootstrapOptions _adminBootstrap;
 
-        public ConexaoAdminService(IConexaoConfigStore store)
+        public ConexaoAdminService(
+            IConexaoConfigStore store,
+            IOptions<AdminBootstrapOptions> adminBootstrap)
         {
             _store = store;
+            _adminBootstrap = adminBootstrap.Value;
         }
 
         public ConexaoPostgresResponse? ObterConfiguracao()
@@ -165,23 +171,31 @@ namespace ConexaoDinamica.Infrastructure.Data.Configuracoes
                 var pendentes = (await contexto.Database
                     .GetPendingMigrationsAsync(cancellationToken)).ToList();
 
-                if (pendentes.Count == 0)
+                if (pendentes.Count > 0)
                 {
-                    return new AplicarMigrationsResponse
-                    {
-                        Sucesso = true,
-                        Mensagem = "O banco já está atualizado. Nenhuma migration pendente."
-                    };
+                    // Migrate() cria o banco caso ele ainda não exista.
+                    await contexto.Database.MigrateAsync(cancellationToken);
                 }
 
-                // Migrate() cria o banco caso ele ainda não exista.
-                await contexto.Database.MigrateAsync(cancellationToken);
+                // Roda mesmo sem migrations pendentes: cobre o caso de o schema já
+                // existir mas o super administrador ter sido removido. É idempotente.
+                var senhaGerada = await SeedSuperUsuario.GarantirAsync(
+                    contexto, _adminBootstrap.Email, _adminBootstrap.Nome, cancellationToken);
 
                 return new AplicarMigrationsResponse
                 {
                     Sucesso = true,
-                    Mensagem = $"{pendentes.Count} migration(s) aplicada(s) com sucesso.",
-                    Aplicadas = pendentes
+                    Mensagem = pendentes.Count == 0
+                        ? "O banco já está atualizado. Nenhuma migration pendente."
+                        : $"{pendentes.Count} migration(s) aplicada(s) com sucesso.",
+                    Aplicadas = pendentes,
+                    SuperUsuario = senhaGerada is null ? null : new SuperUsuarioCriadoResponse
+                    {
+                        Email = _adminBootstrap.Email,
+                        SenhaProvisoria = senhaGerada,
+                        Aviso = "Anote esta senha agora: ela não será exibida novamente. " +
+                                "O banco guarda apenas o hash."
+                    }
                 };
             }
             catch (Exception ex)
