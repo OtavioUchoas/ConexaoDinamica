@@ -49,9 +49,36 @@ builder.Services.AddFluentValidationConfig();
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
-var jwtSecret = builder.Configuration["Jwt:Secret"]!;
+var jwtSecret = builder.Configuration["Jwt:Secret"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]!;
 var jwtAudience = builder.Configuration["Jwt:Audience"]!;
+
+// Falha cedo e com instrução, em vez de tarde e sem contexto.
+//
+// Sem esta verificação, um segredo ausente só se manifestava no primeiro login,
+// como erro genérico do middleware de exceções; e um segredo curto demais
+// quebrava apenas na assinatura, com a mensagem obscura do HMAC-SHA256 sobre
+// tamanho de chave. Nenhum dos dois aponta para o appsettings.
+//
+// O mínimo de 32 caracteres não é arbitrário: HMAC-SHA256 exige chave de 256
+// bits, e uma chave menor é rejeitada pelo próprio algoritmo.
+const int tamanhoMinimoSegredo = 32;
+
+if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < tamanhoMinimoSegredo)
+{
+    throw new InvalidOperationException(
+        $"""
+         Jwt:Secret ausente ou com menos de {tamanhoMinimoSegredo} caracteres.
+
+         A aplicação não sobe sem ele. Para configurar em desenvolvimento, na pasta
+         de ConexaoDinamica.API:
+
+             dotnet user-secrets set "Jwt:Secret" "<chave-com-32-caracteres-ou-mais>"
+
+         user-secrets fica fora do repositório, diferente do appsettings.json.
+         Em produção, use variável de ambiente ou um cofre de segredos.
+         """);
+}
 
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
