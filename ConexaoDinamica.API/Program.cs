@@ -161,4 +161,13 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// O Angular é servido a partir do wwwroot, e cuida do próprio roteamento.
+// Sem este fallback, recarregar a página em /admin/conexoes devolveria 404:
+// o servidor procuraria um arquivo com esse nome, que não existe — as rotas
+// só existem dentro do JavaScript já carregado.
+//
+// Fica depois de MapControllers para que /api/... continue chegando aos
+// controllers; o fallback só atende o que nenhuma rota reivindicou.
+app.MapFallbackToFile("index.html");
+
 app.Run();

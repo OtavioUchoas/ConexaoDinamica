@@ -58,6 +58,21 @@ namespace ConexaoDinamica.API.Middlewares
         ];
 
         /// <summary>
+        /// Somente requisições de API são bloqueadas.
+        ///
+        /// O frontend Angular é servido deste mesmo host, e bloqueá-lo criaria uma
+        /// armadilha circular: o 503 impediria o navegador de baixar o index.html e
+        /// os bundles, ou seja, o guard esconderia justamente a tela que existe para
+        /// desfazer o bloqueio. O usuário veria um JSON cru em vez do assistente de
+        /// configuração.
+        ///
+        /// Servir os arquivos não expõe nada: as telas continuam sem dados, porque
+        /// toda chamada a /api que dependa de banco segue recebendo 503 — e é
+        /// justamente esse 503, com setupRequired, que leva o Angular ao assistente.
+        /// </summary>
+        private const string PrefixoApi = "/api";
+
+        /// <summary>
         /// O store é singleton, e middlewares também são construídos uma única vez.
         /// Injetá-lo aqui é seguro. Um serviço scoped no construtor de um middleware
         /// seria uma captive dependency — ficaria preso à primeira requisição.
@@ -70,7 +85,7 @@ namespace ConexaoDinamica.API.Middlewares
 
         public async Task InvokeAsync(HttpContext context)
         {
-            if (EhRotaLiberada(context.Request.Path))
+            if (!EhRequisicaoDeApi(context.Request.Path) || EhRotaLiberada(context.Request.Path))
             {
                 await _next(context);
                 return;
@@ -117,6 +132,9 @@ namespace ConexaoDinamica.API.Middlewares
             return $"Configuração pendente: {string.Join(" e ", pendentes)}. " +
                    "Acesse o AdminCenter para concluir a configuração inicial.";
         }
+
+        private static bool EhRequisicaoDeApi(PathString caminho) =>
+            caminho.StartsWithSegments(PrefixoApi, StringComparison.OrdinalIgnoreCase);
 
         private static bool EhRotaLiberada(PathString caminho) =>
             PrefixosLiberados.Any(prefixo =>

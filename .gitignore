@@ -27,3 +27,13 @@ appsettings.*.local.json
 ## OS
 Thumbs.db
 .DS_Store
+
+## Angular / Node
+node_modules/
+.angular/
+*.log
+npm-debug.log*
+
+## Build do Angular publicado dentro da API.
+## E artefato gerado: sai do "ng build", nao deve ser versionado.
+ConexaoDinamica.API/wwwroot/
