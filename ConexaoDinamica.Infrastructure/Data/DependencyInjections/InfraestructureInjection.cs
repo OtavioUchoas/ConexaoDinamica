@@ -1,8 +1,10 @@
 ﻿using ConexaoDinamica.Application.AplicationInterfaces.Autenticacao;
+using ConexaoDinamica.Application.AplicationInterfaces.Auditoria;
 using ConexaoDinamica.Application.AplicationInterfaces.Configuracoes;
 using ConexaoDinamica.Application.AplicationInterfaces.Repositorios.UsuarioRepositorios;
 using ConexaoDinamica.Application.Configuracoes;
 using ConexaoDinamica.Application.Servicos.AutenticacaoServico;
+using ConexaoDinamica.Infrastructure.Auditoria;
 using ConexaoDinamica.Infrastructure.AuthService;
 using ConexaoDinamica.Infrastructure.Data.AppDBsContext;
 using ConexaoDinamica.Infrastructure.Data.Configuracoes;
@@ -35,6 +37,10 @@ namespace ConexaoDinamica.Infrastructure.Data.DependencyInjections
                     : null;
 
                 options.UseNpgsql(connectionString);
+
+                // Resolvido do mesmo scope do contexto: o interceptor guarda estado
+                // entre SavingChanges e SavedChanges, e precisa ser um por requisição.
+                options.AddInterceptors(sp.GetRequiredService<AuditoriaSaveChangesInterceptor>());
             });
 
             // Store de configuração (LiteDB) — precisa existir mesmo sem Postgres configurado
@@ -43,6 +49,27 @@ namespace ConexaoDinamica.Infrastructure.Data.DependencyInjections
 
             // Casos de uso do AdminCenter
             services.AddScoped<IConexaoAdminService, ConexaoAdminService>();
+
+            // Auditoria
+            //
+            // O provider é singleton porque o MongoClient mantém o próprio pool de
+            // conexões e é projetado para viver durante toda a aplicação — criar um
+            // por requisição vazaria pools. Ele se encarrega de recriar o client
+            // quando a configuração muda.
+            //
+            // O interceptor é scoped: guarda os eventos coletados entre
+            // SavingChanges e SavedChanges, e como singleton misturaria requisições
+            // simultâneas.
+            // Precisa acontecer antes da primeira gravação: o driver 3.x exige
+            // representação explícita de Guid.
+            MapeamentoAuditoriaMongo.Registrar();
+
+            services.AddHttpContextAccessor();
+            services.AddSingleton<IMongoConexaoProvider, MongoConexaoProvider>();
+            services.AddScoped<IContextoAuditoria, ContextoAuditoria>();
+            services.AddScoped<IAuditoriaRepository, MongoAuditoriaRepository>();
+            services.AddScoped<IAuditoriaService, AuditoriaService>();
+            services.AddScoped<AuditoriaSaveChangesInterceptor>();
 
             // Admin bootstrap (credenciais fora do banco)
             services.Configure<AdminBootstrapOptions>(
