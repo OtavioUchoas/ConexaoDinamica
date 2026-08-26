@@ -45,3 +45,22 @@
 .acao {
   margin-top: 0.25rem;
 }
+
+.rodape {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+// Discreto de propósito: presente para quem precisa, sem competir com o
+// formulário principal.
+.acesso-admin {
+  font-size: 0.8rem;
+  opacity: 0.7;
+
+  &:hover {
+    opacity: 1;
+  }
+}

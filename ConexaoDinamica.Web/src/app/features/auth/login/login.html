@@ -6,18 +6,16 @@
 
     <mat-card-header>
       <mat-card-title>ConexaoDinamica</mat-card-title>
-      <mat-card-subtitle>
-        {{ modoAdmin() ? 'Acesso administrativo' : 'Acesse sua conta' }}
-      </mat-card-subtitle>
+      <mat-card-subtitle>Acesse sua conta</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
       <form class="formulario" (ngSubmit)="entrar()">
         <mat-form-field appearance="outline">
-          <mat-label>{{ modoAdmin() ? 'Usuário ou e-mail' : 'E-mail' }}</mat-label>
-          <input matInput name="identificador" [(ngModel)]="identificador"
+          <mat-label>E-mail</mat-label>
+          <input matInput type="email" name="email" [(ngModel)]="email"
                  [disabled]="carregando()" autocomplete="username" required />
-          <mat-icon matSuffix>person</mat-icon>
+          <mat-icon matSuffix>mail</mat-icon>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
@@ -27,20 +25,6 @@
           <mat-icon matSuffix>lock</mat-icon>
         </mat-form-field>
 
-        <mat-slide-toggle name="modoAdmin" [checked]="modoAdmin()"
-                          (change)="modoAdmin.set($event.checked)"
-                          [disabled]="carregando()">
-          Entrar como administrador
-        </mat-slide-toggle>
-
-        <p class="dica">
-          @if (modoAdmin()) {
-            Funciona mesmo sem banco configurado — é por aqui que a instalação começa.
-          } @else {
-            Requer o PostgreSQL já configurado.
-          }
-        </p>
-
         @if (erro(); as mensagem) {
           <div class="erro" role="alert">
             <mat-icon>error_outline</mat-icon>
@@ -48,10 +32,17 @@
           </div>
         }
 
-        <button matButton="filled" type="submit" class="acao" [disabled]="carregando()">
+        <button matButton="filled" type="submit" [disabled]="carregando()">
           {{ carregando() ? 'Entrando...' : 'Entrar' }}
         </button>
       </form>
+
+      <div class="rodape">
+        <a matButton routerLink="/admin/login" class="acesso-admin">
+          <mat-icon>shield_person</mat-icon>
+          Acesso administrativo
+        </a>
+      </div>
     </mat-card-content>
   </mat-card>
 </div>
