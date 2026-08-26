@@ -7,11 +7,23 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Enums trafegam como TEXTO, nao como numero.
+        //
+        // Sem isto, o cliente precisaria enviar { "status": 2 } e adivinhar o que
+        // 2 significa — e reordenar o enum mudaria silenciosamente o significado
+        // das requisicoes ja em uso. E a mesma escolha feita na persistencia:
+        // StatusPedido e PerfilUsuario sao gravados como string no Postgres, e os
+        // enums da auditoria como string no Mongo.
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
 builder.Services.AddOpenApi(options =>
 {
