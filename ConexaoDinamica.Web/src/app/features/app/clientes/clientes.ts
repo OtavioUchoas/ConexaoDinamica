@@ -142,7 +142,12 @@ export class Clientes {
 
   private abrirFormulario(cliente: ClienteResponse | null): void {
     this.dialog
-      .open(ClienteDialog, { data: { cliente }, autoFocus: 'first-tabbable' })
+      .open(ClienteDialog, {
+        data: { cliente },
+        autoFocus: 'first-tabbable',
+        width: '32rem',
+        maxWidth: '94vw',
+      })
       .afterClosed()
       .subscribe((salvou) => {
         if (salvou) {

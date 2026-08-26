@@ -136,7 +136,15 @@ export class Pedidos {
 
   private abrirFormulario(pedido: PedidoResponse | null): void {
     this.dialog
-      .open(PedidoDialog, { data: { pedido }, autoFocus: 'first-tabbable' })
+      .open(PedidoDialog, {
+        data: { pedido },
+        autoFocus: 'first-tabbable',
+        // A largura vai AQUI, e nao no CSS do conteudo: mat-dialog-content tem
+        // overflow auto, entao um min-width nele nao empurra o dialogo para
+        // crescer — apenas cria barra de rolagem, cortando os campos da direita.
+        width: '54rem',
+        maxWidth: '96vw',
+      })
       .afterClosed()
       .subscribe((salvou) => {
         if (salvou) {

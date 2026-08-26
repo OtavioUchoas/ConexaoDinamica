@@ -93,7 +93,12 @@ export class Painel {
    */
   protected editar(tipo: TipoConexao): void {
     this.dialog
-      .open(ConexaoDialog, { data: { tipo }, autoFocus: false })
+      .open(ConexaoDialog, {
+        data: { tipo },
+        autoFocus: false,
+        width: '38rem',
+        maxWidth: '94vw',
+      })
       .afterClosed()
       .subscribe((alterou) => {
         if (alterou) {

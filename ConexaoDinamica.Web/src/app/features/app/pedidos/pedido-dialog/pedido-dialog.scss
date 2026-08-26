@@ -1,19 +1,31 @@
+// O Material limita o conteúdo do diálogo a 65vh, o que fazia um pedido com
+// poucos itens já nascer com barra de rolagem. Com o formulário compacto
+// (subscriptSizing dinâmico nos campos), 80vh acomoda o cabeçalho, várias
+// linhas de item e o total sem rolar.
+//
+// Para pedidos realmente longos a rolagem volta — e aí ela é legítima: nenhuma
+// altura de tela comporta trinta itens.
 mat-dialog-content {
-  min-width: min(46rem, 88vw);
+  // Sem min-width: quem define a largura e o open() do dialogo. Aqui isso so
+  // geraria rolagem horizontal, porque este elemento tem overflow auto.
+  max-height: 80vh;
 }
 
 .cabecalho {
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
-  gap: 0 1rem;
+  gap: 0.75rem 1rem;
   padding-top: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .itens-cabecalho {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0.5rem 0;
+  margin: 0.75rem 0 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--mat-sys-outline-variant);
 
   h3 {
     margin: 0;
@@ -23,16 +35,18 @@ mat-dialog-content {
 
 .linha-item {
   display: grid;
-  grid-template-columns: 1fr 5rem 7rem 5rem 2.5rem;
+  grid-template-columns: 1fr 4.5rem 7rem 5rem 2.5rem;
   gap: 0 0.5rem;
   align-items: center;
+  // Espaçamento entre linhas agora vem daqui, e não da margem embutida que os
+  // campos reservavam para o hint.
+  margin-bottom: 0.6rem;
 }
 
 .subtotal {
   text-align: right;
   font-family: ui-monospace, monospace;
   font-size: 0.85rem;
-  padding-bottom: 1.25rem;
 }
 
 .sem-itens {
@@ -45,8 +59,9 @@ mat-dialog-content {
 .total {
   display: flex;
   justify-content: flex-end;
+  align-items: baseline;
   gap: 1rem;
-  padding: 0.75rem 3rem 0.75rem 0;
+  padding: 0.75rem 3rem 0.25rem 0;
   border-top: 1px solid var(--mat-sys-outline-variant);
   font-size: 1.05rem;
 
@@ -57,7 +72,6 @@ mat-dialog-content {
 
 .perigo {
   color: var(--mat-sys-error);
-  margin-bottom: 1.25rem;
 }
 
 .erro {
@@ -69,6 +83,7 @@ mat-dialog-content {
   background: var(--mat-sys-error-container);
   color: var(--mat-sys-on-error-container);
   font-size: 0.85rem;
+  margin-top: 0.5rem;
 }
 
 @media (max-width: 40rem) {
