@@ -1,0 +1,40 @@
+<mat-toolbar class="barra">
+  <button matIconButton aria-label="Menu" (click)="alternarMenu()">
+    <mat-icon>menu</mat-icon>
+  </button>
+  <span class="titulo">ConexaoDinamica</span>
+
+  <span class="espaco"></span>
+
+  @if (ehAdministrador()) {
+    <a matButton routerLink="/admin" class="atalho-admin">
+      <mat-icon>settings</mat-icon>
+      AdminCenter
+    </a>
+  }
+
+  @if (sessao(); as usuario) {
+    <span class="usuario">{{ usuario.nome }}</span>
+  }
+
+  <button matIconButton aria-label="Sair" (click)="sair()">
+    <mat-icon>logout</mat-icon>
+  </button>
+</mat-toolbar>
+
+<mat-sidenav-container class="area">
+  <mat-sidenav [opened]="menuAberto()" mode="side" class="menu">
+    <mat-nav-list>
+      @for (modulo of modulos; track modulo.rota) {
+        <a mat-list-item [routerLink]="modulo.rota" routerLinkActive="ativo">
+          <mat-icon matListItemIcon>{{ modulo.icone }}</mat-icon>
+          <span matListItemTitle>{{ modulo.rotulo }}</span>
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <router-outlet />
+  </mat-sidenav-content>
+</mat-sidenav-container>

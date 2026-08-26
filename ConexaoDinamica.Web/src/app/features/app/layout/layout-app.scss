@@ -1,0 +1,53 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.barra {
+  flex: 0 0 auto;
+  gap: 0.5rem;
+  z-index: 10;
+}
+
+.titulo {
+  font-weight: 500;
+}
+
+.espaco {
+  flex: 1 1 auto;
+}
+
+.usuario {
+  font-size: 0.8rem;
+  opacity: 0.75;
+  margin-right: 0.5rem;
+}
+
+.atalho-admin {
+  margin-right: 0.5rem;
+}
+
+// A área ocupa o que sobra da altura; sem isso o sidenav-container colapsa,
+// já que ele dimensiona pelo próprio conteúdo.
+.area {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.menu {
+  width: 14rem;
+  border-right: 1px solid var(--mat-sys-outline-variant);
+}
+
+.ativo {
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
+@media (max-width: 40rem) {
+  .usuario,
+  .atalho-admin span {
+    display: none;
+  }
+}

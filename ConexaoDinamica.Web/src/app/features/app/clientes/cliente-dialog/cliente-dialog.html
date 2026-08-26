@@ -1,0 +1,39 @@
+<h2 mat-dialog-title>{{ editando ? 'Editar cliente' : 'Novo cliente' }}</h2>
+
+@if (salvando()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+<mat-dialog-content>
+  <form class="formulario" (ngSubmit)="salvar()">
+    <mat-form-field appearance="outline">
+      <mat-label>Nome</mat-label>
+      <input matInput name="nome" [(ngModel)]="dados.nome" [disabled]="salvando()" required />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Documento</mat-label>
+      <input matInput name="documento" [(ngModel)]="dados.documento" [disabled]="salvando()" required />
+      <mat-hint>Precisa ser único</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>E-mail (opcional)</mat-label>
+      <input matInput type="email" name="email" [(ngModel)]="dados.email" [disabled]="salvando()" />
+    </mat-form-field>
+
+    @if (erro(); as mensagem) {
+      <div class="erro" role="alert">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ mensagem }}</span>
+      </div>
+    }
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button matButton (click)="cancelar()" [disabled]="salvando()">Cancelar</button>
+  <button matButton="filled" (click)="salvar()" [disabled]="salvando()">
+    {{ salvando() ? 'Salvando...' : 'Salvar' }}
+  </button>
+</mat-dialog-actions>

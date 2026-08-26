@@ -130,3 +130,19 @@ export interface FiltroAuditoria {
   pagina?: number;
   tamanhoPagina?: number;
 }
+
+// ── Clientes ───────────────────────────────────────────────────────────────
+
+export interface ClienteRequest {
+  nome: string;
+  documento: string;
+  email?: string | null;
+}
+
+export interface ClienteResponse {
+  id: number;
+  nome: string;
+  documento: string;
+  email: string | null;
+  dataCadastro: string;
+}

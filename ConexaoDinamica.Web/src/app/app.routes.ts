@@ -39,6 +39,23 @@ export const routes: Routes = [
     title: 'Configuração inicial — ConexaoDinamica',
   },
   {
+    // Área da aplicação. Exige apenas sessão — qualquer perfil entra, incluindo
+    // o administrador, que ganha um atalho para o AdminCenter na barra.
+    path: 'app',
+    canActivate: [autenticadoGuard],
+    loadComponent: () =>
+      import('./features/app/layout/layout-app').then((m) => m.LayoutApp),
+    children: [
+      {
+        path: 'clientes',
+        loadComponent: () =>
+          import('./features/app/clientes/clientes').then((m) => m.Clientes),
+        title: 'Clientes — ConexaoDinamica',
+      },
+      { path: '', pathMatch: 'full', redirectTo: 'clientes' },
+    ],
+  },
+  {
     path: 'admin',
     canActivate: [adminGuard],
     loadComponent: () =>
