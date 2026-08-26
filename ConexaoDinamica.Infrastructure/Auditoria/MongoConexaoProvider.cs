@@ -1,6 +1,8 @@
 using ConexaoDinamica.Application.AplicationInterfaces.Configuracoes;
 using ConexaoDinamica.Application.Configuracoes;
 using ConexaoDinamica.Infrastructure.Data.Configuracoes;
+using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace ConexaoDinamica.Infrastructure.Auditoria
@@ -23,15 +25,17 @@ namespace ConexaoDinamica.Infrastructure.Auditoria
     public class MongoConexaoProvider : IMongoConexaoProvider
     {
         private readonly IConexaoConfigStore _store;
+        private readonly ILogger<MongoConexaoProvider> _logger;
         private readonly object _lock = new();
 
         private MongoClient? _client;
         private string? _chaveAtual;
         private string? _databaseAtual;
 
-        public MongoConexaoProvider(IConexaoConfigStore store)
+        public MongoConexaoProvider(IConexaoConfigStore store, ILogger<MongoConexaoProvider> logger)
         {
             _store = store;
+            _logger = logger;
         }
 
         public IMongoDatabase? ObterDatabase()
@@ -54,9 +58,49 @@ namespace ConexaoDinamica.Infrastructure.Auditoria
                     _client = new MongoClient(MontadorConexaoMongo.Montar(config));
                     _chaveAtual = chave;
                     _databaseAtual = config.Database;
+
+                    GarantirIndices(_client.GetDatabase(_databaseAtual));
                 }
 
                 return _client.GetDatabase(_databaseAtual);
+            }
+        }
+
+        /// <summary>
+        /// Cria os índices da trilha de auditoria, se ainda não existirem.
+        ///
+        /// Sem eles, toda consulta filtrada varre a coleção inteira — e uma trilha
+        /// de auditoria só cresce, então o problema aparece justamente quando já há
+        /// dados demais para corrigir sem incomodar.
+        ///
+        /// DataHora é decrescente porque a ordenação padrão é do mais recente para
+        /// o mais antigo. O índice composto de entidade atende a pergunta mais
+        /// comum: "o que aconteceu com este registro?".
+        ///
+        /// CreateMany é idempotente: reexecutar com índices já criados não faz nada.
+        /// Falhas são engolidas de propósito — um usuário sem permissão de criar
+        /// índice ainda deve conseguir usar o sistema, apenas com consulta mais lenta.
+        /// </summary>
+        private void GarantirIndices(IMongoDatabase database)
+        {
+            try
+            {
+                var colecao = database.GetCollection<BsonDocument>("eventos_auditoria");
+                var construtor = Builders<BsonDocument>.IndexKeys;
+
+                colecao.Indexes.CreateMany(
+                [
+                    new CreateIndexModel<BsonDocument>(construtor.Descending("DataHora")),
+                    new CreateIndexModel<BsonDocument>(
+                        construtor.Ascending("Entidade.Tipo").Ascending("Entidade.Id").Descending("DataHora")),
+                    new CreateIndexModel<BsonDocument>(construtor.Ascending("Usuario.Id")),
+                    new CreateIndexModel<BsonDocument>(construtor.Ascending("CorrelationId")),
+                ]);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Não foi possível criar os índices da auditoria. As consultas seguirão funcionando, porém mais lentas.");
             }
         }
 
