@@ -1,4 +1,5 @@
 ﻿using ConexaoDinamica.Application.AplicationInterfaces.Autenticacao;
+using ConexaoDinamica.Application.AplicationInterfaces.Repositorios.PedidoRepositorios;
 using ConexaoDinamica.Application.AplicationInterfaces.Repositorios.ClienteRepositorios;
 using ConexaoDinamica.Application.AplicationInterfaces.Auditoria;
 using ConexaoDinamica.Application.AplicationInterfaces.Configuracoes;
@@ -10,6 +11,7 @@ using ConexaoDinamica.Infrastructure.AuthService;
 using ConexaoDinamica.Infrastructure.Data.AppDBsContext;
 using ConexaoDinamica.Infrastructure.Data.Configuracoes;
 using ConexaoDinamica.Infrastructure.Repositorios.ClienteRepositorio;
+using ConexaoDinamica.Infrastructure.Repositorios.PedidoRepositorio;
 using ConexaoDinamica.Infrastructure.Repositorios.UsuarioRepositorio;
 using LiteDB;
 using Microsoft.EntityFrameworkCore;
@@ -85,6 +87,7 @@ namespace ConexaoDinamica.Infrastructure.Data.DependencyInjections
             // Repositories
             services.AddScoped<IUsuarioRepository, UsuarioRepository>();
             services.AddScoped<IClienteRepository, ClienteRepository>();
+            services.AddScoped<IPedidoRepository, PedidoRepository>();
 
             return services;
         }
