@@ -52,6 +52,12 @@ export const routes: Routes = [
           import('./features/app/clientes/clientes').then((m) => m.Clientes),
         title: 'Clientes — ConexaoDinamica',
       },
+      {
+        path: 'pedidos',
+        loadComponent: () =>
+          import('./features/app/pedidos/pedidos').then((m) => m.Pedidos),
+        title: 'Pedidos — ConexaoDinamica',
+      },
       { path: '', pathMatch: 'full', redirectTo: 'clientes' },
     ],
   },

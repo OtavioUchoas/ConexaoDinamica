@@ -1,0 +1,79 @@
+mat-dialog-content {
+  min-width: min(46rem, 88vw);
+}
+
+.cabecalho {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 0 1rem;
+  padding-top: 0.5rem;
+}
+
+.itens-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0.5rem 0;
+
+  h3 {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+}
+
+.linha-item {
+  display: grid;
+  grid-template-columns: 1fr 5rem 7rem 5rem 2.5rem;
+  gap: 0 0.5rem;
+  align-items: center;
+}
+
+.subtotal {
+  text-align: right;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  padding-bottom: 1.25rem;
+}
+
+.sem-itens {
+  padding: 1rem;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
+.total {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 0.75rem 3rem 0.75rem 0;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  font-size: 1.05rem;
+
+  strong {
+    font-family: ui-monospace, monospace;
+  }
+}
+
+.perigo {
+  color: var(--mat-sys-error);
+  margin-bottom: 1.25rem;
+}
+
+.erro {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 40rem) {
+  .cabecalho,
+  .linha-item {
+    grid-template-columns: 1fr;
+  }
+}

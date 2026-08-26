@@ -146,3 +146,43 @@ export interface ClienteResponse {
   email: string | null;
   dataCadastro: string;
 }
+
+// ── Pedidos ────────────────────────────────────────────────────────────────
+
+export type StatusPedido = 'Rascunho' | 'Confirmado' | 'Enviado' | 'Cancelado';
+
+export interface ItemPedidoRequest {
+  /** Nulo em item novo; preenchido em item existente, para ser atualizado. */
+  id?: number | null;
+  descricao: string;
+  quantidade: number;
+  precoUnitario: number;
+}
+
+export interface PedidoRequest {
+  numero: string;
+  clienteId: number;
+  status: StatusPedido;
+  /** Sem total: o servidor calcula a partir dos itens. */
+  itens: ItemPedidoRequest[];
+}
+
+export interface ItemPedidoResponse {
+  id: number;
+  descricao: string;
+  quantidade: number;
+  precoUnitario: number;
+  subtotal: number;
+}
+
+export interface PedidoResponse {
+  id: number;
+  numero: string;
+  clienteId: number;
+  clienteNome: string;
+  status: StatusPedido;
+  total: number;
+  dataCriacao: string;
+  /** Vazio na listagem; preenchido no detalhe. */
+  itens: ItemPedidoResponse[];
+}
