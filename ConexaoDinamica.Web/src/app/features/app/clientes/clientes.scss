@@ -46,9 +46,13 @@
   font-size: 0.85rem;
 }
 
+// Dois matIconButton ocupam 48px cada — exatamente 6rem —, sem sobrar espaco
+// para o padding da celula, o que empurrava o segundo botao para a linha de
+// baixo. A largura maior e o nowrap garantem que fiquem lado a lado.
 .col-acoes {
-  width: 6rem;
+  width: 7.5rem;
   text-align: right;
+  white-space: nowrap;
 }
 
 .perigo {
