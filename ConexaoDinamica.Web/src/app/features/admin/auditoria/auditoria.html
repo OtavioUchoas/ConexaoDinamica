@@ -1,0 +1,155 @@
+@if (carregando()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+<main class="conteudo">
+  <h2>Trilha de auditoria</h2>
+
+  <mat-card class="filtros">
+    <mat-card-content>
+      <div class="campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Entidade</mat-label>
+          <mat-select name="tipoEntidade" [(ngModel)]="filtro.tipoEntidade">
+            <mat-option [value]="undefined">Todas</mat-option>
+            @for (tipo of tiposEntidade(); track tipo) {
+              <mat-option [value]="tipo">{{ tipo }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Registro (id)</mat-label>
+          <input matInput name="entidadeId" [(ngModel)]="filtro.entidadeId" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Evento</mat-label>
+          <mat-select name="tipoEvento" [(ngModel)]="filtro.tipoEvento">
+            <mat-option [value]="undefined">Todos</mat-option>
+            @for (tipo of tiposEvento; track tipo) {
+              <mat-option [value]="tipo">{{ tipo }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>De</mat-label>
+          <input matInput type="datetime-local" name="dataInicio" [(ngModel)]="filtro.dataInicio" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Até</mat-label>
+          <input matInput type="datetime-local" name="dataFim" [(ngModel)]="filtro.dataFim" />
+        </mat-form-field>
+      </div>
+
+      <div class="acoes">
+        <button matButton="filled" (click)="aplicarFiltro()" [disabled]="carregando()">
+          <mat-icon>search</mat-icon> Filtrar
+        </button>
+        <button matButton (click)="limparFiltro()" [disabled]="carregando()">Limpar</button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  @if (erro(); as mensagem) {
+    <div class="erro" role="alert">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ mensagem }}</span>
+    </div>
+  } @else if (eventos().length === 0 && !carregando()) {
+    <p class="vazio">Nenhum evento encontrado para os critérios informados.</p>
+  } @else {
+    <mat-accordion multi>
+      @for (evento of eventos(); track evento.id) {
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <mat-icon [class]="'tipo-' + evento.tipoEvento">{{ icone(evento.tipoEvento) }}</mat-icon>
+              <span class="entidade">{{ evento.entidade.tipo }}#{{ evento.entidade.id }}</span>
+            </mat-panel-title>
+            <mat-panel-description>
+              <span class="quando">{{ evento.dataHora | date: 'dd/MM/yyyy HH:mm:ss' }}</span>
+              <span class="quem">
+                {{ evento.usuario ? evento.usuario.nome : 'sistema' }}
+              </span>
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+
+          <!-- Alterações -->
+          @if (evento.alteracoes.length > 0) {
+            <h4>Alterações</h4>
+            <table class="diff">
+              <tbody>
+                @for (alteracao of evento.alteracoes; track alteracao.campo) {
+                  <tr>
+                    <td class="campo">{{ alteracao.campo }}</td>
+                    <td class="de">{{ formatar(alteracao.de) }}</td>
+                    <td class="seta"><mat-icon>arrow_forward</mat-icon></td>
+                    <td class="para">{{ formatar(alteracao.para) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          <!-- Referências a outros agregados -->
+          @if (chavesDe(evento.referencias).length > 0) {
+            <h4>Referências</h4>
+            <mat-chip-set>
+              @for (chave of chavesDe(evento.referencias); track chave) {
+                <mat-chip>
+                  {{ chave }}: {{ evento.referencias[chave].descricao ?? evento.referencias[chave].id }}
+                </mat-chip>
+              }
+            </mat-chip-set>
+          }
+
+          <!-- Snapshot -->
+          @if (chavesDe(evento.snapshot).length > 0) {
+            <h4>Estado</h4>
+            <dl class="snapshot">
+              @for (par of paresDe(evento.snapshot); track par.chave) {
+                <dt>{{ par.chave }}</dt>
+                <dd>{{ par.valor }}</dd>
+              }
+            </dl>
+          }
+
+          <!-- Partes do agregado -->
+          @for (colecao of chavesDe(evento.partes); track colecao) {
+            <h4>{{ colecao }}</h4>
+            @for (parte of evento.partes[colecao]; track $index) {
+              <dl class="snapshot parte">
+                @for (par of paresDe(parte); track par.chave) {
+                  <dt>{{ par.chave }}</dt>
+                  <dd>{{ par.valor }}</dd>
+                }
+              </dl>
+            }
+          }
+
+          <div class="rodape">
+            @if (evento.origem?.ip) {
+              <span class="meta">origem: {{ evento.origem!.ip }}</span>
+            }
+            @if (evento.correlationId) {
+              <span class="meta">correlação: {{ evento.correlationId }}</span>
+            }
+            <button matButton (click)="filtrarPorRegistro(evento)">
+              <mat-icon>filter_alt</mat-icon> Ver histórico deste registro
+            </button>
+          </div>
+        </mat-expansion-panel>
+      }
+    </mat-accordion>
+
+    <mat-paginator
+      [length]="total()"
+      [pageIndex]="(filtro.pagina ?? 1) - 1"
+      [pageSize]="filtro.tamanhoPagina ?? 25"
+      [pageSizeOptions]="[10, 25, 50, 100]"
+      (page)="mudarPagina($event)" />
+  }
+</main>

@@ -50,6 +50,12 @@ export const routes: Routes = [
           import('./features/admin/painel/painel').then((m) => m.Painel),
         title: 'Conexões — AdminCenter',
       },
+      {
+        path: 'auditoria',
+        loadComponent: () =>
+          import('./features/admin/auditoria/auditoria').then((m) => m.Auditoria),
+        title: 'Auditoria — AdminCenter',
+      },
       { path: '', pathMatch: 'full', redirectTo: 'conexoes' },
     ],
   },

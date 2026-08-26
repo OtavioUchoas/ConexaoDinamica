@@ -1,0 +1,149 @@
+.conteudo {
+  padding: 1.5rem;
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+.filtros {
+  margin-bottom: 1rem;
+}
+
+.campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.25rem 1rem;
+}
+
+.acoes {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.erro {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  font-size: 0.875rem;
+}
+
+.vazio {
+  padding: 2rem;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
+mat-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.entidade {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+mat-panel-description {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  font-size: 0.8rem;
+}
+
+.quem {
+  min-width: 8rem;
+}
+
+// Cor por tipo de evento: remoção precisa saltar aos olhos numa lista longa.
+.tipo-Adicao { color: var(--mat-sys-primary); }
+.tipo-Alteracao { color: var(--mat-sys-tertiary); }
+.tipo-Remocao { color: var(--mat-sys-error); }
+.tipo-Visualizacao { color: var(--mat-sys-on-surface-variant); }
+
+h4 {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.diff {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+
+  td {
+    padding: 0.3rem 0.5rem;
+    vertical-align: top;
+  }
+
+  .campo {
+    font-family: ui-monospace, monospace;
+    white-space: nowrap;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .de {
+    text-decoration: line-through;
+    opacity: 0.7;
+  }
+
+  .para {
+    font-weight: 600;
+  }
+
+  .seta mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+    opacity: 0.5;
+  }
+}
+
+.snapshot {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 1rem;
+  margin: 0;
+  font-size: 0.85rem;
+
+  dt {
+    font-family: ui-monospace, monospace;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  dd {
+    margin: 0;
+    word-break: break-word;
+  }
+}
+
+.parte {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  border-radius: 0.375rem;
+  background: var(--mat-sys-surface-container-high);
+}
+
+.rodape {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+.meta {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  font-family: ui-monospace, monospace;
+}

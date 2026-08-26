@@ -83,3 +83,50 @@ export interface SetupPendente {
   conexoes: { postgres: boolean; mongo: boolean };
   message: string;
 }
+
+// ── Auditoria ──────────────────────────────────────────────────────────────
+
+export type TipoEventoAuditoria = 'Adicao' | 'Alteracao' | 'Remocao' | 'Visualizacao';
+
+export interface AlteracaoCampo {
+  campo: string;
+  de: unknown;
+  para: unknown;
+}
+
+export interface EventoAuditoria {
+  id: string;
+  versaoSchema: number;
+  dataHora: string;
+  tipoEvento: TipoEventoAuditoria;
+  correlationId: string | null;
+  entidade: { tipo: string; id: string };
+  usuario: { id: string; nome: string; email: string | null } | null;
+  origem: { ip: string | null; userAgent: string | null } | null;
+  alteracoes: AlteracaoCampo[];
+  /** Campos escalares da entidade. Chaves variam conforme o tipo auditado. */
+  snapshot: Record<string, unknown>;
+  /** Chaves estrangeiras resolvidas com descrição legível. */
+  referencias: Record<string, { id: string; descricao: string | null }>;
+  /** Partes do agregado, agrupadas pelo nome da coleção (ex.: "Itens"). */
+  partes: Record<string, Record<string, unknown>[]>;
+}
+
+export interface ResultadoPaginado<T> {
+  itens: T[];
+  total: number;
+  pagina: number;
+  tamanhoPagina: number;
+  totalPaginas: number;
+}
+
+export interface FiltroAuditoria {
+  tipoEntidade?: string;
+  entidadeId?: string;
+  tipoEvento?: TipoEventoAuditoria;
+  usuarioId?: string;
+  dataInicio?: string;
+  dataFim?: string;
+  pagina?: number;
+  tamanhoPagina?: number;
+}
