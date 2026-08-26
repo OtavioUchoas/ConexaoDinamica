@@ -1,0 +1,121 @@
+<h2 mat-dialog-title>
+  {{ tipo === 'postgres' ? 'Conexão do PostgreSQL' : 'Conexão do MongoDB' }}
+</h2>
+
+@if (ocupado()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+<mat-dialog-content>
+  <p class="explicacao">
+    @if (tipo === 'postgres') {
+      Alterar aqui muda o banco usado pela aplicação a partir da próxima
+      requisição, sem reiniciar.
+    } @else {
+      Destino da trilha de auditoria. Instalações locais costumam rodar sem
+      autenticação — nesse caso, deixe usuário e senha em branco.
+    }
+  </p>
+
+  <div class="campos">
+    @if (tipo === 'postgres') {
+      <mat-form-field appearance="outline">
+        <mat-label>Host</mat-label>
+        <input matInput name="host" [(ngModel)]="postgres.host" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="estreito">
+        <mat-label>Porta</mat-label>
+        <input matInput type="number" name="porta" [(ngModel)]="postgres.porta" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Banco</mat-label>
+        <input matInput name="database" [(ngModel)]="postgres.database" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Usuário</mat-label>
+        <input matInput name="usuario" [(ngModel)]="postgres.usuario" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="largo">
+        <mat-label>Senha</mat-label>
+        <input matInput type="password" name="senha" [(ngModel)]="postgres.senha"
+               autocomplete="new-password" />
+        @if (senhaJaDefinida()) {
+          <mat-hint>Existe senha salva, mas ela não é recuperável — redigite para manter o acesso.</mat-hint>
+        }
+      </mat-form-field>
+    } @else {
+      <mat-form-field appearance="outline">
+        <mat-label>Host</mat-label>
+        <input matInput name="host" [(ngModel)]="mongo.host" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="estreito">
+        <mat-label>Porta</mat-label>
+        <input matInput type="number" name="porta" [(ngModel)]="mongo.porta" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Banco</mat-label>
+        <input matInput name="database" [(ngModel)]="mongo.database" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Usuário (opcional)</mat-label>
+        <input matInput name="usuario" [(ngModel)]="mongo.usuario" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Senha (opcional)</mat-label>
+        <input matInput type="password" name="senha" [(ngModel)]="mongo.senha"
+               autocomplete="new-password" />
+        @if (senhaJaDefinida()) {
+          <mat-hint>Redigite para manter o acesso.</mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>AuthSource</mat-label>
+        <input matInput name="authSource" [(ngModel)]="mongo.authSource" />
+        <mat-hint>Banco onde o usuário está cadastrado — normalmente "admin"</mat-hint>
+      </mat-form-field>
+    }
+  </div>
+
+  @if (senhaJaDefinida()) {
+    <div class="confirmacao">
+      <mat-checkbox [checked]="confirmaSemSenha()"
+                    (change)="confirmaSemSenha.set($event.checked)">
+        Salvar sem senha — a conexão passará a autenticar sem senha
+      </mat-checkbox>
+    </div>
+  }
+
+  @if (teste(); as t) {
+    <div [class]="t.sucesso ? 'sucesso' : 'falha'">
+      <mat-icon>{{ t.sucesso ? 'check_circle' : 'error_outline' }}</mat-icon>
+      <span>
+        {{ t.mensagem }}
+        @if (t.sucesso) {
+          · {{ t.tempoMs }}ms
+          @if (t.versaoServidor) { · versão {{ t.versaoServidor }} }
+        }
+      </span>
+    </div>
+  }
+
+  @if (erro(); as e) {
+    <div class="falha"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button matButton (click)="cancelar()" [disabled]="ocupado()">Cancelar</button>
+  <button matButton (click)="testar()" [disabled]="ocupado()">
+    <mat-icon>network_check</mat-icon> Testar
+  </button>
+  <button matButton="filled" (click)="salvar()" [disabled]="ocupado()">Salvar</button>
+</mat-dialog-actions>
