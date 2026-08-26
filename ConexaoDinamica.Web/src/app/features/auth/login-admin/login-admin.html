@@ -1,0 +1,40 @@
+<div class="pagina">
+  <mat-card class="cartao">
+    @if (carregando()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+
+    <mat-card-header>
+      <mat-icon mat-card-avatar>shield_person</mat-icon>
+      <mat-card-title>Acesso administrativo</mat-card-title>
+      <mat-card-subtitle>ConexaoDinamica</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form class="formulario" (ngSubmit)="entrar()">
+        <mat-form-field appearance="outline">
+          <mat-label>Usuário ou e-mail</mat-label>
+          <input matInput name="login" [(ngModel)]="login"
+                 [disabled]="carregando()" autocomplete="username" required />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Senha</mat-label>
+          <input matInput type="password" name="senha" [(ngModel)]="senha"
+                 [disabled]="carregando()" autocomplete="current-password" required />
+        </mat-form-field>
+
+        @if (erro(); as mensagem) {
+          <div class="erro" role="alert">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ mensagem }}</span>
+          </div>
+        }
+
+        <button matButton="filled" type="submit" [disabled]="carregando()">
+          {{ carregando() ? 'Entrando...' : 'Entrar' }}
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

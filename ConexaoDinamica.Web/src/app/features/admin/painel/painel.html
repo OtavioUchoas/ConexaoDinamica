@@ -1,21 +1,4 @@
-<mat-toolbar>
-  <mat-icon>settings</mat-icon>
-  <span class="titulo">AdminCenter</span>
-  <span class="espaco"></span>
-
-  @if (sessao(); as usuario) {
-    <span class="usuario">{{ usuario.nome }} · {{ usuario.perfil }}</span>
-  }
-
-  <button matIconButton aria-label="Recarregar" (click)="carregar()">
-    <mat-icon>refresh</mat-icon>
-  </button>
-  <button matIconButton aria-label="Sair" (click)="sair()">
-    <mat-icon>logout</mat-icon>
-  </button>
-</mat-toolbar>
-
-@if (carregando()) {
+@if (carregando() || aplicandoMigrations()) {
   <mat-progress-bar mode="indeterminate" />
 }
 
@@ -23,6 +6,7 @@
   <h2>Conexões</h2>
 
   <div class="grade">
+    <!-- PostgreSQL -->
     <mat-card>
       <mat-card-header>
         <mat-icon mat-card-avatar>storage</mat-icon>
@@ -41,8 +25,14 @@
           <p class="vazio">Não configurado.</p>
         }
       </mat-card-content>
+      <mat-card-actions>
+        <button matButton (click)="editar('postgres')">
+          <mat-icon>edit</mat-icon> Editar conexão
+        </button>
+      </mat-card-actions>
     </mat-card>
 
+    <!-- MongoDB -->
     <mat-card>
       <mat-card-header>
         <mat-icon mat-card-avatar>article</mat-icon>
@@ -62,8 +52,14 @@
           <p class="vazio">Não configurado.</p>
         }
       </mat-card-content>
+      <mat-card-actions>
+        <button matButton (click)="editar('mongo')">
+          <mat-icon>edit</mat-icon> Editar conexão
+        </button>
+      </mat-card-actions>
     </mat-card>
 
+    <!-- Migrations -->
     <mat-card>
       <mat-card-header>
         <mat-icon mat-card-avatar>schema</mat-icon>
@@ -86,11 +82,12 @@
           }
         }
       </mat-card-content>
+      <mat-card-actions>
+        <button matButton (click)="aplicarMigrations()"
+                [disabled]="aplicandoMigrations() || !migrations()?.conseguiuConectar">
+          <mat-icon>play_arrow</mat-icon> Aplicar
+        </button>
+      </mat-card-actions>
     </mat-card>
   </div>
-
-  <p class="nota">
-    Somente leitura por enquanto. Editar as conexões e aplicar migrations entram
-    junto com o assistente de configuração.
-  </p>
 </main>

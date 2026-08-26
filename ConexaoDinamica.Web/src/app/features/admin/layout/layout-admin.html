@@ -1,0 +1,25 @@
+<mat-toolbar class="barra">
+  <mat-icon>settings</mat-icon>
+  <span class="titulo">AdminCenter</span>
+
+  <nav class="navegacao">
+    @for (item of itens; track item.rota) {
+      <a matButton [routerLink]="item.rota" routerLinkActive="ativo">
+        <mat-icon>{{ item.icone }}</mat-icon>
+        {{ item.rotulo }}
+      </a>
+    }
+  </nav>
+
+  <span class="espaco"></span>
+
+  @if (sessao(); as usuario) {
+    <span class="usuario">{{ usuario.nome }} · {{ usuario.perfil }}</span>
+  }
+
+  <button matIconButton aria-label="Sair" (click)="sair()">
+    <mat-icon>logout</mat-icon>
+  </button>
+</mat-toolbar>
+
+<router-outlet />

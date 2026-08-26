@@ -1,13 +1,21 @@
 import { Routes } from '@angular/router';
 
-import { adminGuard } from './core/guards/autenticado.guard';
+import { adminGuard, autenticadoGuard } from './core/guards/autenticado.guard';
 
 /**
- * Rotas com carregamento tardio (loadComponent).
+ * Três áreas com propósitos distintos:
  *
- * Cada tela vira um bundle proprio, baixado so quando acessada. Importa aqui
- * porque o assistente de configuracao precisa carregar rapido em uma instalacao
- * nova, sem arrastar junto o codigo das telas de negocio.
+ *   /login       aplicação, para o usuário comum
+ *   /admin/...   AdminCenter, sob layout próprio e role Administrador
+ *   /setup       assistente de configuração, sem layout
+ *
+ * O login administrativo fica FORA do layout do AdminCenter: ele existe
+ * justamente para quem ainda não tem sessão, e envolvê-lo na moldura que exibe
+ * usuário e menu não faria sentido.
+ *
+ * Todas as telas usam loadComponent. Cada uma vira um bundle próprio, o que
+ * importa aqui porque o assistente precisa carregar rápido numa instalação
+ * nova, sem arrastar o código das demais.
  */
 export const routes: Routes = [
   {
@@ -16,9 +24,15 @@ export const routes: Routes = [
     title: 'Entrar — ConexaoDinamica',
   },
   {
-    // Sem guard de propósito: e para ca que o setupInterceptor traz o usuario
-    // quando nao ha banco configurado, e nesse momento ainda nao existe sessao.
-    // O proprio assistente cuida do login no primeiro passo, e os endpoints que
+    path: 'admin/login',
+    loadComponent: () =>
+      import('./features/auth/login-admin/login-admin').then((m) => m.LoginAdmin),
+    title: 'Acesso administrativo — ConexaoDinamica',
+  },
+  {
+    // Sem guard de propósito: é para cá que o setupInterceptor traz o usuário
+    // quando não há banco configurado, e nesse instante ainda não existe sessão.
+    // O próprio assistente cuida do login no primeiro passo, e os endpoints que
     // ele chama continuam exigindo role Administrador no backend.
     path: 'setup',
     loadComponent: () => import('./features/setup/setup').then((m) => m.Setup),
@@ -27,13 +41,22 @@ export const routes: Routes = [
   {
     path: 'admin',
     canActivate: [adminGuard],
-    loadComponent: () => import('./features/admin/painel/painel').then((m) => m.Painel),
-    title: 'AdminCenter — ConexaoDinamica',
+    loadComponent: () =>
+      import('./features/admin/layout/layout-admin').then((m) => m.LayoutAdmin),
+    children: [
+      {
+        path: 'conexoes',
+        loadComponent: () =>
+          import('./features/admin/painel/painel').then((m) => m.Painel),
+        title: 'Conexões — AdminCenter',
+      },
+      { path: '', pathMatch: 'full', redirectTo: 'conexoes' },
+    ],
   },
   { path: '', pathMatch: 'full', redirectTo: 'login' },
 
   // Qualquer rota desconhecida volta ao login. O servidor entrega o index.html
-  // para qualquer caminho (MapFallbackToFile), entao quem decide o que e rota
-  // valida e o Angular.
+  // para qualquer caminho (MapFallbackToFile), então quem decide o que é rota
+  // válida é o Angular.
   { path: '**', redirectTo: 'login' },
 ];
