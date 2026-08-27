@@ -37,3 +37,10 @@ npm-debug.log*
 ## Build do Angular publicado dentro da API.
 ## E artefato gerado: sai do "ng build", nao deve ser versionado.
 ConexaoDinamica.API/wwwroot/
+
+## Arquivos do LiteDB (config.db e o -log.db que ele cria ao lado).
+## Guardam as conexoes do Postgres e do Mongo com a SENHA EM TEXTO PURO.
+## Por padrao ficam em %LOCALAPPDATA%, fora do repositorio — mas basta
+## apontar Storage:ConfigDbPath para uma pasta local e um "git add -A"
+## publicaria as credenciais dos dois bancos.
+*.db
