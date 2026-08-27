@@ -93,13 +93,18 @@ idempotente, então quem perder o cartão não tem como pedir de novo.
 Os dois nascem vazios no repositório, de propósito. Na pasta de
 `ConexaoDinamica.API`:
 
-```bash
-dotnet user-secrets set "Jwt:Secret" "<chave-com-32-caracteres-ou-mais>"
+```powershell
+dotnet user-secrets set 'Jwt:Secret' '<chave-com-32-caracteres-ou-mais>'
 ```
 
 A aplicação **não sobe sem ele**, e falha com instrução na tela. Use
 `user-secrets` e não `appsettings.json`: o primeiro fica fora do repositório.
 O mínimo de 32 caracteres é exigência do HMAC-SHA256 (chave de 256 bits).
+
+> ⚠️ **Aspas simples, não duplas.** No PowerShell, `"$2y$10$abc"` faz o `$2y`,
+> o `$10` e o `$abc` virarem variáveis vazias, e o valor chega truncado e sem os
+> `$`. O sintoma aparece só depois, no login, como "salt inválido" — sem
+> mencionar aspas em lugar nenhum.
 
 Depois o admin de bootstrap — sem `SenhaHash` nenhum login é aceito, e é por ele
 que se chega ao AdminCenter para configurar as conexões. Gere o hash com o SDK,
@@ -111,12 +116,19 @@ sem precisar de projeto auxiliar:
 printfn "%s" (BCrypt.Net.BCrypt.HashPassword "sua-senha-aqui")
 ```
 
-```bash
+```powershell
 dotnet fsi gerar-hash.fsx
-dotnet user-secrets set "AdminBootstrap:SenhaHash" "<hash-gerado>"
+dotnet user-secrets set 'AdminBootstrap:SenhaHash' '<hash-gerado>'
 ```
 
 Apague o `.fsx` depois — ele contém a senha em texto puro.
+
+Gere localmente, não em site de terceiros: um gerador online recebe a sua senha
+de administrador em texto puro, e é a credencial que configura as conexões e
+recupera o sistema.
+
+Para conferir o que ficou gravado, `dotnet user-secrets list` — o hash tem de ter
+60 caracteres e três `$`.
 
 ### 2. Ajuste o restante em `appsettings.json`
 
