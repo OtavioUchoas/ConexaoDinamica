@@ -41,6 +41,7 @@
         "**/[Oo]bj/**",
         "**/.vs/**",
         "**/.git/**",
+        ".template.config/**",
         "**/node_modules/**",
         "**/.angular/**",
         "**/*.user",
