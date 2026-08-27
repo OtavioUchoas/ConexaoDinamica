@@ -117,9 +117,16 @@
             </dl>
           }
 
-          <!-- Partes do agregado -->
+          <!--
+            Partes do agregado.
+
+            O rótulo diz "alterados" nos eventos de alteração porque é isso que a
+            lista contém: só as partes que passaram pelo ChangeTracker. Chamá-la
+            apenas de "Itens" sugeria estado completo do agregado, e um pedido com
+            um item intocado aparecia como se não tivesse item nenhum.
+          -->
           @for (colecao of chavesDe(evento.partes); track colecao) {
-            <h4>{{ colecao }}</h4>
+            <h4>{{ colecao }}{{ evento.tipoEvento === 'Alteracao' ? ' alterados' : '' }}</h4>
             @for (parte of evento.partes[colecao]; track $index) {
               <dl class="snapshot parte">
                 @for (par of paresDe(parte); track par.chave) {

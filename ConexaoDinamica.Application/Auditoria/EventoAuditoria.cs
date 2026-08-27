@@ -77,6 +77,13 @@ namespace ConexaoDinamica.Application.Auditoria
         /// (_t: "System.Collections.Generic.List..."), poluindo o documento.
         ///
         /// Só a raiz do agregado tem evento próprio; as partes vivem aqui dentro.
+        ///
+        /// ATENÇÃO ao significado: num evento de Alteracao, esta lista traz as
+        /// partes ALTERADAS na operação, não todas as partes do agregado. O
+        /// interceptor só enxerga o que passou pelo ChangeTracker, e um item
+        /// intocado nunca chega até aqui. Já o Snapshot acima é completo, para a
+        /// raiz. É uma assimetria real — carregar a coleção inteira durante o
+        /// SaveChanges dispararia consultas no meio da gravação.
         /// </summary>
         public Dictionary<string, List<Dictionary<string, object?>>> Partes { get; set; } = [];
 
