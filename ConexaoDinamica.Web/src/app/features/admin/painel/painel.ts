@@ -18,11 +18,14 @@ import {
   ConexaoMongoResponse,
   ConexaoPostgresResponse,
   StatusMigrationsResponse,
+  SuperUsuarioCriadoResponse,
 } from '../../../core/models/conexao.model';
+import { CredencialSuperUsuario } from '../../../shared/credencial-super-usuario/credencial-super-usuario';
 
 @Component({
   selector: 'app-painel',
   imports: [
+    CredencialSuperUsuario,
     MatButtonModule,
     MatCardModule,
     MatChipsModule,
@@ -48,6 +51,14 @@ export class Painel {
   protected readonly postgres = signal<ConexaoPostgresResponse | null>(null);
   protected readonly mongo = signal<ConexaoMongoResponse | null>(null);
   protected readonly migrations = signal<StatusMigrationsResponse | null>(null);
+
+  /**
+   * Credencial do super administrador, quando aplicar as migrations acabou de
+   * criá-lo. Fica de fora do carregar(): não é estado do servidor que se possa
+   * recarregar — é o resultado efêmero de uma ação, e o backend não tem como
+   * devolvê-la de novo, já que guarda apenas o hash.
+   */
+  protected readonly superUsuario = signal<SuperUsuarioCriadoResponse | null>(null);
 
   constructor() {
     this.carregar();
@@ -116,16 +127,17 @@ export class Painel {
         this.aplicandoMigrations.set(false);
         this.aviso.open(resultado.mensagem, 'Fechar', { duration: 6000 });
 
-        // A senha do super administrador só aparece uma vez. Se isso acontecer
-        // aqui — porque o usuário foi removido do banco, por exemplo — avisamos
-        // que o lugar de vê-la é o assistente, que trata a exibição com o
-        // cuidado devido (destaque, cópia e confirmação de que foi anotada).
+        // A senha do super administrador vem na resposta e só existe aqui: o
+        // banco guarda apenas o hash, e o seed é idempotente — chamar de novo
+        // devolve superUsuario null, sem recriar o usuário. Por isso ela é
+        // exibida na hora, e não delegada a outra tela.
+        //
+        // O if importa. Atribuir direto apagaria um cartão ainda não lido caso
+        // o botão fosse clicado uma segunda vez, e não haveria como recuperá-lo
+        // — justamente a perda que este cartão existe para evitar. Só o gesto
+        // de confirmar o dispensa.
         if (resultado.superUsuario) {
-          this.aviso.open(
-            'Um super administrador foi criado. Abra o assistente de configuração para ver a senha.',
-            'Fechar',
-            { duration: 15000 },
-          );
+          this.superUsuario.set(resultado.superUsuario);
         }
 
         this.carregar();
@@ -139,6 +151,13 @@ export class Painel {
         );
       },
     });
+  }
+
+  /** Fecha o cartão de credencial depois que a senha foi confirmada como anotada. */
+  protected dispensarCredencial(anotada: boolean): void {
+    if (anotada) {
+      this.superUsuario.set(null);
+    }
   }
 
   protected sair(): void {

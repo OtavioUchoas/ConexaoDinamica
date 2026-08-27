@@ -4,7 +4,6 @@ import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,6 +20,7 @@ import {
   SuperUsuarioCriadoResponse,
   TesteConexaoResponse,
 } from '../../core/models/conexao.model';
+import { CredencialSuperUsuario } from '../../shared/credencial-super-usuario/credencial-super-usuario';
 
 /**
  * Assistente de configuração inicial.
@@ -40,10 +40,10 @@ import {
 @Component({
   selector: 'app-setup',
   imports: [
+    CredencialSuperUsuario,
     FormsModule,
     MatButtonModule,
     MatCardModule,
-    MatCheckboxModule,
     MatChipsModule,
     MatFormFieldModule,
     MatIconModule,
@@ -98,7 +98,6 @@ export class Setup {
   protected readonly superUsuario = signal<SuperUsuarioCriadoResponse | null>(null);
   protected readonly senhaAnotada = signal(false);
   protected readonly erroMigrations = signal<string | null>(null);
-  protected readonly senhaCopiada = signal(false);
 
   /**
    * Só libera a conclusão depois que a senha do super administrador for
@@ -232,23 +231,6 @@ export class Setup {
         this.erroMigrations.set(falha.error?.mensagem ?? this.descreverFalha(falha));
       },
     });
-  }
-
-  protected async copiarSenha(): Promise<void> {
-    const senha = this.superUsuario()?.senhaProvisoria;
-
-    if (!senha) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(senha);
-      this.senhaCopiada.set(true);
-    } catch {
-      // A Clipboard API exige contexto seguro (HTTPS ou localhost) e permissão.
-      // Falhar não é problema: a senha está visível na tela para cópia manual.
-      this.senhaCopiada.set(false);
-    }
   }
 
   protected concluir(): void {

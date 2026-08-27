@@ -3,6 +3,15 @@
 }
 
 <main class="conteudo">
+  <!--
+    Fica ANTES dos cartões de conexão de propósito: a senha aparece uma única
+    vez, e enterrá-la abaixo da grade seria repetir o erro de descartá-la.
+  -->
+  @if (superUsuario(); as su) {
+    <app-credencial-super-usuario [dados]="su" [dispensavel]="true"
+                                  (anotadaChange)="dispensarCredencial($event)" />
+  }
+
   <h2>Conexões</h2>
 
   <div class="grade">
