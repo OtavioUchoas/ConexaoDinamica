@@ -94,17 +94,22 @@ Os dois nascem vazios no repositório, de propósito. Na pasta de
 `ConexaoDinamica.API`:
 
 ```powershell
-dotnet user-secrets set 'Jwt:Secret' '<chave-com-32-caracteres-ou-mais>'
+dotnet user-secrets set 'Jwt:Secret' 'sua-chave-de-32-caracteres-ou-mais'
 ```
 
 A aplicação **não sobe sem ele**, e falha com instrução na tela. Use
 `user-secrets` e não `appsettings.json`: o primeiro fica fora do repositório.
 O mínimo de 32 caracteres é exigência do HMAC-SHA256 (chave de 256 bits).
 
-> ⚠️ **Aspas simples, não duplas.** No PowerShell, `"$2y$10$abc"` faz o `$2y`,
-> o `$10` e o `$abc` virarem variáveis vazias, e o valor chega truncado e sem os
-> `$`. O sintoma aparece só depois, no login, como "salt inválido" — sem
-> mencionar aspas em lugar nenhum.
+> ⚠️ **Aspas simples, e nada além do valor entre elas.** Dois jeitos de gravar um
+> segredo corrompido, os dois silenciosos até muito depois:
+>
+> - Aspas duplas no PowerShell: em `"$2y$10$abc"`, o `$2y`, o `$10` e o `$abc`
+>   viram variáveis vazias, e o valor chega sem os `$`
+> - Colchetes de placeholder: `'<meu-hash>'` grava os `<` e `>` junto
+>
+> Os dois aparecem no login como "salt inválido", que não menciona nem aspas nem
+> colchetes. Confira sempre com `dotnet user-secrets list` antes de subir.
 
 Depois o admin de bootstrap — sem `SenhaHash` nenhum login é aceito, e é por ele
 que se chega ao AdminCenter para configurar as conexões. Gere o hash com o SDK,
@@ -118,7 +123,7 @@ printfn "%s" (BCrypt.Net.BCrypt.HashPassword "sua-senha-aqui")
 
 ```powershell
 dotnet fsi gerar-hash.fsx
-dotnet user-secrets set 'AdminBootstrap:SenhaHash' '<hash-gerado>'
+dotnet user-secrets set 'AdminBootstrap:SenhaHash' '$2a$12$cole.o.hash.impresso.acima'
 ```
 
 Apague o `.fsx` depois — ele contém a senha em texto puro.
