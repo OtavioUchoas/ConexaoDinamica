@@ -33,5 +33,24 @@ namespace ConexaoDinamica.Application.AplicationInterfaces.Auditoria
             string tipoEntidade,
             string entidadeId,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Registra que a trilha foi exportada para fora do sistema.
+        ///
+        /// É o evento mais importante desta interface. Exportar a auditoria é o
+        /// gesto que tira os dados de dentro de qualquer controle de acesso: a
+        /// partir dali o arquivo circula por e-mail, pen drive e pasta
+        /// compartilhada. Sem este registro, a única ação que realmente esvazia a
+        /// trilha seria a única que ela não veria.
+        ///
+        /// Segue o critério documentado acima: grava o FILTRO e o volume, nunca um
+        /// evento por linha exportada.
+        /// </summary>
+        /// <param name="criterio">Filtros aplicados, em texto legível.</param>
+        /// <param name="quantidade">Número de eventos que saíram no arquivo.</param>
+        Task RegistrarExportacaoAsync(
+            string criterio,
+            int quantidade,
+            CancellationToken cancellationToken = default);
     }
 }

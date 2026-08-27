@@ -25,10 +25,17 @@ namespace ConexaoDinamica.API.Controllers.AdminController
     public class AdminAuditoriaController : ControllerBase
     {
         private readonly IAuditoriaRepository _auditoria;
+        private readonly IExportadorAuditoria _exportador;
+        private readonly IAuditoriaService _auditoriaService;
 
-        public AdminAuditoriaController(IAuditoriaRepository auditoria)
+        public AdminAuditoriaController(
+            IAuditoriaRepository auditoria,
+            IExportadorAuditoria exportador,
+            IAuditoriaService auditoriaService)
         {
             _auditoria = auditoria;
+            _exportador = exportador;
+            _auditoriaService = auditoriaService;
         }
 
         /// <summary>
@@ -73,6 +80,84 @@ namespace ConexaoDinamica.API.Controllers.AdminController
             {
                 // MongoDB não configurado. 503 e não 500: é indisponibilidade de
                 // dependência, e a mensagem diz o que fazer a respeito.
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+                {
+                    message = "A trilha de auditoria está indisponível: o MongoDB não está configurado.",
+                });
+            }
+        }
+
+        /// <summary>
+        /// Exporta em XLSX todos os eventos que casam com o filtro.
+        /// </summary>
+        /// <remarks>
+        /// Aceita os mesmos filtros da consulta, mas ignora a paginação de
+        /// propósito: quem exporta quer o resultado inteiro, não a página que está
+        /// na tela. O teto é FiltroAuditoria.LimiteExportacao — acima dele a
+        /// resposta é 400, orientando a estreitar o período, em vez de um arquivo
+        /// truncado sem aviso.
+        ///
+        /// A própria exportação vira um evento na trilha. É o registro mais
+        /// importante que este controller produz: é o momento em que os dados
+        /// saem do alcance de qualquer controle de acesso.
+        /// </remarks>
+        [HttpGet("exportar")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+        public async Task<IActionResult> Exportar(
+            [FromQuery] string? tipoEntidade,
+            [FromQuery] string? entidadeId,
+            [FromQuery] TipoEventoAuditoria? tipoEvento,
+            [FromQuery] string? usuarioId,
+            [FromQuery] DateTime? dataInicio,
+            [FromQuery] DateTime? dataFim,
+            CancellationToken cancellationToken = default)
+        {
+            var filtro = new FiltroAuditoria
+            {
+                TipoEntidade = tipoEntidade,
+                EntidadeId = entidadeId,
+                TipoEvento = tipoEvento,
+                UsuarioId = usuarioId,
+                DataInicio = dataInicio,
+                DataFim = dataFim,
+            };
+
+            try
+            {
+                var eventos = await _auditoria.ConsultarParaExportacaoAsync(filtro, cancellationToken);
+                var criterio = filtro.Descrever();
+
+                var planilha = _exportador.GerarPlanilha(eventos, criterio);
+
+                // Registrado DEPOIS de gerar: falhar na geração e mesmo assim
+                // gravar "exportou" deixaria na trilha um fato que não aconteceu.
+                await _auditoriaService.RegistrarExportacaoAsync(
+                    criterio, eventos.Count, cancellationToken);
+
+                var nomeArquivo = $"auditoria-{DateTime.Now:yyyyMMdd-HHmmss}.xlsx";
+
+                return File(
+                    planilha,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    nomeArquivo);
+            }
+            catch (ExportacaoExcedeLimiteException ex)
+            {
+                // 400 e não 500: o servidor está bem, o pedido é que é grande
+                // demais. A mensagem traz os números para a pessoa saber o quanto
+                // precisa estreitar.
+                return BadRequest(new
+                {
+                    message = $"{ex.Message} Estreite o período ou filtre por entidade.",
+                    total = ex.Total,
+                    limite = ex.Limite,
+                });
+            }
+            catch (InvalidOperationException)
+            {
                 return StatusCode(StatusCodes.Status503ServiceUnavailable, new
                 {
                     message = "A trilha de auditoria está indisponível: o MongoDB não está configurado.",

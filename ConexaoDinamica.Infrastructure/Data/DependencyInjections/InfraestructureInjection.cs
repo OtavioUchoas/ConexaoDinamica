@@ -73,6 +73,10 @@ namespace ConexaoDinamica.Infrastructure.Data.DependencyInjections
             services.AddScoped<IContextoAuditoria, ContextoAuditoria>();
             services.AddScoped<IAuditoriaRepository, MongoAuditoriaRepository>();
             services.AddScoped<IAuditoriaService, AuditoriaService>();
+
+            // Singleton: não guarda estado entre chamadas e não depende de nada
+            // com escopo — cada GerarPlanilha cria o próprio XLWorkbook.
+            services.AddSingleton<IExportadorAuditoria, ExportadorAuditoriaXlsx>();
             services.AddScoped<AuditoriaSaveChangesInterceptor>();
 
             // Admin bootstrap (credenciais fora do banco)

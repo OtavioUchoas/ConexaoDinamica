@@ -109,6 +109,34 @@ namespace ConexaoDinamica.Infrastructure.Auditoria
             };
         }
 
+        public async Task<IReadOnlyList<EventoAuditoria>> ConsultarParaExportacaoAsync(
+            FiltroAuditoria filtro,
+            CancellationToken cancellationToken = default)
+        {
+            var colecao = ObterColecao()
+                ?? throw new InvalidOperationException("MongoDB não configurado.");
+
+            var condicao = MontarCondicao(filtro);
+
+            // Conta ANTES de buscar. Trazer os documentos para depois descobrir que
+            // são demais já teria custado a memória que o limite existe para
+            // proteger — a contagem resolve no índice, sem materializar nada.
+            var total = await colecao.CountDocumentsAsync(condicao, cancellationToken: cancellationToken);
+
+            if (total > FiltroAuditoria.LimiteExportacao)
+            {
+                throw new ExportacaoExcedeLimiteException(total, FiltroAuditoria.LimiteExportacao);
+            }
+
+            // Ordem crescente aqui, ao contrário da consulta da tela. Quem lê a
+            // trilha na interface quer o que acabou de acontecer no topo; quem abre
+            // a planilha quer acompanhar a história na ordem em que ela ocorreu.
+            return await colecao
+                .Find(condicao)
+                .Sort(Builders<EventoAuditoria>.Sort.Ascending(e => e.DataHora))
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<IReadOnlyList<string>> ObterTiposEntidadeAsync(
             CancellationToken cancellationToken = default)
         {

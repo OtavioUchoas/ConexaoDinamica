@@ -30,6 +30,24 @@ namespace ConexaoDinamica.Application.AplicationInterfaces.Auditoria
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Todos os eventos que casam com o filtro, sem paginação, para exportação.
+        ///
+        /// Existe separado de ConsultarAsync porque a intenção é outra: aquela
+        /// devolve uma página para a tela, esta devolve o conjunto inteiro para
+        /// virar arquivo. Fossem o mesmo método, a tela poderia pedir tudo por
+        /// engano — e é justamente para impedir isso que TamanhoMaximoPagina
+        /// existe.
+        ///
+        /// Lança <see cref="ExportacaoExcedeLimiteException"/> se o resultado
+        /// passar de FiltroAuditoria.LimiteExportacao: melhor recusar e mandar
+        /// estreitar o filtro do que entregar uma planilha silenciosamente
+        /// incompleta, que numa auditoria seria pior que nenhuma.
+        /// </summary>
+        Task<IReadOnlyList<EventoAuditoria>> ConsultarParaExportacaoAsync(
+            FiltroAuditoria filtro,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Tipos de entidade presentes na trilha, para alimentar o filtro da
         /// interface sem precisar de uma lista fixa no código.
         /// </summary>

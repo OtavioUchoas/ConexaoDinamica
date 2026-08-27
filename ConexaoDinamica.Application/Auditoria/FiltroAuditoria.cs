@@ -32,5 +32,47 @@ namespace ConexaoDinamica.Application.Auditoria
         public int TamanhoPagina { get; set; } = 25;
 
         public const int TamanhoMaximoPagina = 100;
+
+        /// <summary>
+        /// Teto de linhas de uma exportação.
+        ///
+        /// A exportação ignora a paginação de propósito — quem exporta quer o
+        /// resultado inteiro do filtro, não a página que está na tela. Mas sem
+        /// teto, um filtro vazio numa trilha madura tentaria montar uma planilha
+        /// com milhões de linhas em memória, e o processo morre antes de
+        /// responder. Estourado o limite, a resposta orienta a estreitar o
+        /// período em vez de devolver um arquivo truncado em silêncio.
+        /// </summary>
+        public const int LimiteExportacao = 50_000;
+
+        /// <summary>
+        /// Descreve os critérios em uma linha legível, para registrar na trilha o
+        /// QUE foi exportado. Sem isso, o evento de exportação diria apenas que
+        /// alguém exportou algo, o que não serve para auditar coisa nenhuma.
+        /// </summary>
+        public string Descrever()
+        {
+            var partes = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(TipoEntidade))
+                partes.Add($"entidade={TipoEntidade}");
+
+            if (!string.IsNullOrWhiteSpace(EntidadeId))
+                partes.Add($"registro={EntidadeId}");
+
+            if (TipoEvento is not null)
+                partes.Add($"evento={TipoEvento}");
+
+            if (!string.IsNullOrWhiteSpace(UsuarioId))
+                partes.Add($"usuario={UsuarioId}");
+
+            if (DataInicio is not null)
+                partes.Add($"de={DataInicio:yyyy-MM-dd HH:mm}");
+
+            if (DataFim is not null)
+                partes.Add($"ate={DataFim:yyyy-MM-dd HH:mm}");
+
+            return partes.Count == 0 ? "sem filtro" : string.Join(", ", partes);
+        }
     }
 }

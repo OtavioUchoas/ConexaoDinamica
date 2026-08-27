@@ -45,5 +45,37 @@ namespace ConexaoDinamica.Infrastructure.Auditoria
 
             return _repository.RegistrarAsync([evento], cancellationToken);
         }
+
+        public Task RegistrarExportacaoAsync(
+            string criterio,
+            int quantidade,
+            CancellationToken cancellationToken = default)
+        {
+            var evento = new EventoAuditoria
+            {
+                TipoEvento = TipoEventoAuditoria.Exportacao,
+                CorrelationId = _contexto.ObterCorrelationId(),
+                Usuario = _contexto.ObterUsuario(),
+                Origem = _contexto.ObterOrigem(),
+                Entidade = new EntidadeAuditada
+                {
+                    // A "entidade" aqui é a própria trilha, não um registro dela.
+                    // Sem um tipo próprio, o evento apareceria na consulta como se
+                    // pertencesse a algum Pedido ou Cliente específico.
+                    Tipo = "TrilhaAuditoria",
+                    Id = "*"
+                },
+                // O critério vai no Snapshot, e não em Alteracoes: nada mudou, o
+                // que existe é o retrato do que foi levado.
+                Snapshot = new Dictionary<string, object?>
+                {
+                    ["Criterio"] = criterio,
+                    ["QuantidadeEventos"] = quantidade,
+                    ["Formato"] = "XLSX"
+                }
+            };
+
+            return _repository.RegistrarAsync([evento], cancellationToken);
+        }
     }
 }
