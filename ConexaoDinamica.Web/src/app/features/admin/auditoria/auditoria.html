@@ -1,4 +1,4 @@
-@if (carregando()) {
+@if (carregando() || exportando()) {
   <mat-progress-bar mode="indeterminate" />
 }
 
@@ -49,6 +49,18 @@
           <mat-icon>search</mat-icon> Filtrar
         </button>
         <button matButton (click)="limparFiltro()" [disabled]="carregando()">Limpar</button>
+
+        <!--
+          Fica junto dos filtros, e não perto da lista, porque é o filtro que ele
+          exporta — todo o resultado da consulta, não a página visível. Colocado
+          ao lado da paginação, sugeriria o contrário.
+        -->
+        <button matButton="outlined" class="exportar"
+                (click)="exportar()" [disabled]="exportando() || carregando()"
+                matTooltip="Baixa em Excel todos os eventos que atendem ao filtro, não apenas esta página">
+          <mat-icon>download</mat-icon>
+          {{ exportando() ? 'Gerando...' : 'Exportar Excel' }}
+        </button>
       </div>
     </mat-card-content>
   </mat-card>

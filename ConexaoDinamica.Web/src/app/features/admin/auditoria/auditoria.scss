@@ -161,3 +161,11 @@ h4.removidos {
   color: var(--mat-sys-on-surface-variant);
   font-family: ui-monospace, monospace;
 }
+
+/*
+  Empurrado para a direita: separa "o que consultar" (filtrar/limpar) de "o que
+  levar embora". Sem a separacao, exportar parece só mais um botao de busca.
+*/
+.exportar {
+  margin-left: auto;
+}

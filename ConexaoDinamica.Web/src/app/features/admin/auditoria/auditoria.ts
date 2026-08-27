@@ -12,6 +12,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { AuditoriaService } from '../../../core/services/auditoria.service';
 import {
@@ -46,6 +47,7 @@ import {
     MatPaginatorModule,
     MatProgressBarModule,
     MatSelectModule,
+    MatTooltipModule,
   ],
   templateUrl: './auditoria.html',
   styleUrl: './auditoria.scss',
@@ -54,6 +56,7 @@ export class Auditoria {
   private readonly servico = inject(AuditoriaService);
 
   protected readonly carregando = signal(false);
+  protected readonly exportando = signal(false);
   protected readonly erro = signal<string | null>(null);
 
   protected readonly eventos = signal<EventoAuditoria[]>([]);
@@ -65,6 +68,7 @@ export class Auditoria {
     'Alteracao',
     'Remocao',
     'Visualizacao',
+    'Exportacao',
   ];
 
   protected filtro: FiltroAuditoria = { pagina: 1, tamanhoPagina: 25 };
@@ -111,6 +115,80 @@ export class Auditoria {
     });
   }
 
+  /**
+   * Baixa a planilha com o resultado do filtro atual.
+   *
+   * ── Por que não é um link simples ────────────────────────────────────────
+   * O JWT viaja no cabeçalho Authorization, e um <a href> faz o NAVEGADOR
+   * navegar — sem passar pelo HttpClient, portanto sem interceptor e sem token.
+   * O servidor responderia 401. Buscar como blob mantém a requisição dentro do
+   * Angular; o download é disparado depois, a partir do que já chegou.
+   */
+  protected exportar(): void {
+    if (this.exportando()) {
+      return;
+    }
+
+    this.exportando.set(true);
+    this.erro.set(null);
+
+    this.servico.exportar(this.filtro).subscribe({
+      next: (arquivo) => {
+        this.exportando.set(false);
+        this.baixar(arquivo, `auditoria-${this.carimboDeTempo()}.xlsx`);
+      },
+      error: async (falha: HttpErrorResponse) => {
+        this.exportando.set(false);
+
+        // Com responseType 'blob', o corpo de erro TAMBÉM chega como blob — o
+        // JSON com a mensagem viria como "[object Blob]" se lido direto.
+        this.erro.set(await this.descreverFalhaDeBlob(falha));
+      },
+    });
+  }
+
+  /**
+   * Entrega o arquivo ao navegador.
+   *
+   * O revokeObjectURL não é opcional: cada createObjectURL prende o blob na
+   * memória da aba até a página ser recarregada, e exportações repetidas iriam
+   * acumulando planilhas inteiras.
+   */
+  private baixar(arquivo: Blob, nome: string): void {
+    const url = URL.createObjectURL(arquivo);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = nome;
+    link.click();
+
+    URL.revokeObjectURL(url);
+  }
+
+  private async descreverFalhaDeBlob(falha: HttpErrorResponse): Promise<string> {
+    if (falha.status === 503) {
+      return 'Trilha indisponível: o MongoDB não está configurado.';
+    }
+
+    try {
+      const corpo = JSON.parse(await (falha.error as Blob).text());
+      return corpo.message ?? 'Não foi possível exportar a trilha.';
+    } catch {
+      return 'Não foi possível exportar a trilha.';
+    }
+  }
+
+  /** Mesmo formato usado pelo servidor no nome do arquivo. */
+  private carimboDeTempo(): string {
+    const agora = new Date();
+    const doisDigitos = (valor: number) => String(valor).padStart(2, '0');
+
+    return (
+      `${agora.getFullYear()}${doisDigitos(agora.getMonth() + 1)}${doisDigitos(agora.getDate())}` +
+      `-${doisDigitos(agora.getHours())}${doisDigitos(agora.getMinutes())}${doisDigitos(agora.getSeconds())}`
+    );
+  }
+
   protected aplicarFiltro(): void {
     // Filtrar volta para a primeira página: manter a página atual poderia cair
     // num intervalo que o novo filtro nem alcança, mostrando lista vazia.
@@ -142,6 +220,7 @@ export class Auditoria {
       Alteracao: 'edit',
       Remocao: 'delete',
       Visualizacao: 'visibility',
+      Exportacao: 'download',
     }[tipo];
   }
 

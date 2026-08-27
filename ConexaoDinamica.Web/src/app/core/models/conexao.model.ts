@@ -86,7 +86,12 @@ export interface SetupPendente {
 
 // ── Auditoria ──────────────────────────────────────────────────────────────
 
-export type TipoEventoAuditoria = 'Adicao' | 'Alteracao' | 'Remocao' | 'Visualizacao';
+export type TipoEventoAuditoria =
+  | 'Adicao'
+  | 'Alteracao'
+  | 'Remocao'
+  | 'Visualizacao'
+  | 'Exportacao';
 
 export interface AlteracaoCampo {
   campo: string;
