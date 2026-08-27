@@ -59,9 +59,9 @@ idempotente, então quem perder o cartão não tem como pedir de novo.
 - **Modo setup**: bloqueia rotas de negócio enquanto faltar alguma conexão,
   informando quais
 - **Autenticação JWT** com claim de role (`Comum` / `Administrador`)
-- **Admin bootstrap (break-glass)**: credenciais em `appsettings` com hash BCrypt,
-  aceita username **ou** email. Não depende do banco de propósito — é o acesso
-  usado para configurar e para recuperar o sistema
+- **Admin bootstrap (break-glass)**: hash BCrypt em `user-secrets`, aceita username
+  **ou** email. Não depende do banco de propósito — é o acesso usado para
+  configurar e para recuperar o sistema
 - **Seed do super administrador** com senha aleatória exibida uma vez
 - **Auditoria no MongoDB**: adição, alteração, remoção, visualização e exportação
 - **Agregado de exemplo** (Cliente, Pedido, ItemPedido) com CRUD completo,
@@ -82,30 +82,48 @@ idempotente, então quem perder o cartão não tem como pedir de novo.
 - [ ] **Índice TTL para visualizações.** É o tipo de evento que mais infla a trilha
       e o que envelhece mais rápido. Um campo `expiraEm` preenchido só nelas deixa o
       Mongo expirar sozinho, sem separar em coleções
-- [ ] **Admin de bootstrap fora do `appsettings.json`.** O hash BCrypt está
-      versionado, e a senha atual é fraca. O caminho é o mesmo do `Jwt:Secret`:
-      `user-secrets` em desenvolvimento, variável de ambiente em produção
+- [ ] **Rotação da senha do admin de bootstrap.** O hash saiu do repositório e foi
+      para o `user-secrets`, mas o histórico ainda guarda o antigo — se a senha
+      original for reaproveitada em outro lugar, troque-a
 
 ## Rodando
 
-### 1. Configure o segredo do JWT
+### 1. Configure os segredos
 
-A aplicação **não sobe sem ele**, e falha com instrução na tela. Na pasta de
+Os dois nascem vazios no repositório, de propósito. Na pasta de
 `ConexaoDinamica.API`:
 
 ```bash
 dotnet user-secrets set "Jwt:Secret" "<chave-com-32-caracteres-ou-mais>"
 ```
 
-Use `user-secrets` e não `appsettings.json`: o primeiro fica fora do repositório.
+A aplicação **não sobe sem ele**, e falha com instrução na tela. Use
+`user-secrets` e não `appsettings.json`: o primeiro fica fora do repositório.
 O mínimo de 32 caracteres é exigência do HMAC-SHA256 (chave de 256 bits).
+
+Depois o admin de bootstrap — sem `SenhaHash` nenhum login é aceito, e é por ele
+que se chega ao AdminCenter para configurar as conexões. Gere o hash com o SDK,
+sem precisar de projeto auxiliar:
+
+```bash
+# gerar-hash.fsx
+#r "nuget: BCrypt.Net-Next, 4.1.0"
+printfn "%s" (BCrypt.Net.BCrypt.HashPassword "sua-senha-aqui")
+```
+
+```bash
+dotnet fsi gerar-hash.fsx
+dotnet user-secrets set "AdminBootstrap:SenhaHash" "<hash-gerado>"
+```
+
+Apague o `.fsx` depois — ele contém a senha em texto puro.
 
 ### 2. Ajuste o restante em `appsettings.json`
 
 | Chave | Descrição |
 |---|---|
 | `Jwt:Issuer` / `Jwt:Audience` | Emissor e audiência do token |
-| `AdminBootstrap:*` | Credenciais do admin (`SenhaHash` em BCrypt) |
+| `AdminBootstrap:*` | Username, email e nome do admin. O `SenhaHash` vai em `user-secrets` (passo 1) |
 | `Cors:AllowedOrigins` | Origens permitidas do frontend |
 | `Storage:ConfigDbPath` | Opcional. Padrão: `%LOCALAPPDATA%\ConexaoDinamica\config.db` |
 
