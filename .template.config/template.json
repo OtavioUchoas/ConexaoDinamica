@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Otavio",
+  "classifications": [ "Web", "WebAPI", "Angular", "Auditoria" ],
+  "identity": "ConexaoDinamica.Base",
+  "name": "API com auditoria e assistente de conexao",
+  "description": "Solution .NET com trilha de auditoria no MongoDB, assistente de configuracao das conexoes em runtime e frontend Angular.",
+  "shortName": "conexao",
+  "sourceName": "ConexaoDinamica",
+  "defaultName": "MinhaApp",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "solution"
+  },
+
+  "symbols": {
+    "nomeKebab": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "kebabCase",
+      "replaces": "conexao-dinamica",
+      "description": "Forma kebab-case do nome, usada em package.json do Angular."
+    },
+
+    "userSecretsId": {
+      "type": "generated",
+      "generator": "guid",
+      "parameters": { "defaultFormat": "D" },
+      "replaces": "e52400c9-a8e1-4f59-8b7f-354e74c63b10",
+      "description": "UserSecretsId novo por projeto. Herdar o mesmo id faria projetos diferentes compartilharem o mesmo cofre de segredos da maquina."
+    }
+  },
+
+  "sources": [
+    {
+      "source": "./",
+      "target": "./",
+      "exclude": [
+        "**/[Bb]in/**",
+        "**/[Oo]bj/**",
+        "**/.vs/**",
+        "**/.git/**",
+        "**/node_modules/**",
+        "**/.angular/**",
+        "**/*.user",
+        "**/*.suo",
+        "**/appsettings.*.local.json"
+      ]
+    }
+  ]
+}
