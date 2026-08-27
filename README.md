@@ -15,6 +15,37 @@ As configurações ficam num **LiteDB** embarcado, que resolve o problema de ori
 
 > Sem Docker e sem nuvem, por escolha. Cenário alvo: on-premise, instância única.
 
+## Usando como template
+
+> Você está no branch **`template`**. Ele é o `master` mais a configuração do
+> `dotnet new` e sem as credenciais versionadas. O `master` continua sendo o
+> projeto de referência, intocado — correções nascem lá e vêm para cá por
+> `git cherry-pick`.
+
+```bash
+git switch template
+dotnet new install .
+dotnet new conexao -n MinhaApp
+```
+
+O que é renomeado na criação: namespace, nome da solution, dos quatro projetos,
+o projeto do Angular, e o `UserSecretsId` — que é **regerado**, para que dois
+projetos gerados desta base não compartilhem o mesmo cofre de segredos da máquina.
+
+Para desinstalar: `dotnet new uninstall .`
+
+### O CRUD de exemplo vem junto, de propósito
+
+`Cliente`, `Pedido` e `ItemPedido` são a única demonstração dos quatro marcadores
+de auditoria funcionando ao mesmo tempo: raiz, parte, referência auditada e
+propriedade excluída. Comece lendo `Pedido.cs`, imite nas suas entidades, e só
+então apague.
+
+Quando apagar, além das pastas de `Cliente`/`Pedido` em cada camada, restam
+quinze linhas em quatro arquivos — os `DbSet` em `AppDbContext.cs`, os dois
+registros em `InfraestructureInjection.cs`, as rotas em `app.routes.ts` e os dois
+itens de menu em `layout-app.ts`.
+
 ## Arquitetura
 
 ```
@@ -88,24 +119,42 @@ idempotente, então quem perder o cartão não tem como pedir de novo.
 
 ## Rodando
 
-### 1. Configure o segredo do JWT
+### 1. Configure os segredos
 
-A aplicação **não sobe sem ele**, e falha com instrução na tela. Na pasta de
-`ConexaoDinamica.API`:
+Neste branch os dois nascem vazios, para que nenhum projeto gerado herde
+credencial conhecida. Na pasta de `ConexaoDinamica.API`:
 
 ```bash
 dotnet user-secrets set "Jwt:Secret" "<chave-com-32-caracteres-ou-mais>"
 ```
 
-Use `user-secrets` e não `appsettings.json`: o primeiro fica fora do repositório.
+A aplicação **não sobe sem ele**, e falha com instrução na tela. Use
+`user-secrets` e não `appsettings.json`: o primeiro fica fora do repositório.
 O mínimo de 32 caracteres é exigência do HMAC-SHA256 (chave de 256 bits).
+
+Depois o admin de bootstrap — sem `SenhaHash` nenhum login é aceito, e é por ele
+que se chega ao assistente de configuração. Gere o hash com o SDK, sem precisar
+de projeto auxiliar:
+
+```bash
+# gerar-hash.fsx
+#r "nuget: BCrypt.Net-Next, 4.1.0"
+printfn "%s" (BCrypt.Net.BCrypt.HashPassword "sua-senha-aqui")
+```
+
+```bash
+dotnet fsi gerar-hash.fsx
+dotnet user-secrets set "AdminBootstrap:SenhaHash" "<hash-gerado>"
+```
+
+Apague o `.fsx` depois — ele contém a senha em texto puro.
 
 ### 2. Ajuste o restante em `appsettings.json`
 
 | Chave | Descrição |
 |---|---|
 | `Jwt:Issuer` / `Jwt:Audience` | Emissor e audiência do token |
-| `AdminBootstrap:*` | Credenciais do admin (`SenhaHash` em BCrypt) |
+| `AdminBootstrap:*` | Username, email e nome do admin. O `SenhaHash` vai em `user-secrets` (passo 1) |
 | `Cors:AllowedOrigins` | Origens permitidas do frontend |
 | `Storage:ConfigDbPath` | Opcional. Padrão: `%LOCALAPPDATA%\ConexaoDinamica\config.db` |
 
