@@ -132,6 +132,20 @@ h4 {
   background: var(--mat-sys-surface-container-high);
 }
 
+/*
+  A parte removida precisa se distinguir da que permanece: as duas seções têm o
+  mesmo formato, e sem a marca visual dá para ler o estado de um item apagado
+  como se ele ainda fizesse parte do pedido.
+*/
+.removida {
+  border-left: 3px solid var(--mat-sys-error);
+  opacity: 0.85;
+}
+
+h4.removidos {
+  color: var(--mat-sys-error);
+}
+
 .rodape {
   display: flex;
   align-items: center;

@@ -206,14 +206,20 @@ namespace ConexaoDinamica.Infrastructure.Auditoria
             foreach (var grupo in pendente.Partes.GroupBy(p => p.NomeColecao))
             {
                 var itens = new List<Dictionary<string, object?>>();
+                var removidos = new List<Dictionary<string, object?>>();
 
                 foreach (var parte in grupo)
                 {
                     CorrigirChavesNoSnapshot(parte.Entry, parte.Snapshot);
 
-                    // Removida não entra na lista: ela deixou de fazer parte do
-                    // agregado. A saída fica registrada no diff.
-                    if (parte.Estado != EntityState.Deleted)
+                    // A removida não entra em Partes — ela deixou de fazer parte
+                    // do agregado, e listá-la ali faria o evento descrever um
+                    // estado que não existe mais. Vai para PartesRemovidas, onde
+                    // o snapshot é preservado: o diff sozinho registra apenas o
+                    // id, e sem isto o conteúdo do item apagado se perderia.
+                    if (parte.Estado == EntityState.Deleted)
+                        removidos.Add(parte.Snapshot);
+                    else
                         itens.Add(parte.Snapshot);
 
                     var identificador = ObterChave(parte.Entry);
@@ -253,6 +259,9 @@ namespace ConexaoDinamica.Infrastructure.Auditoria
 
                 if (itens.Count > 0)
                     evento.Partes[grupo.Key] = itens;
+
+                if (removidos.Count > 0)
+                    evento.PartesRemovidas[grupo.Key] = removidos;
             }
         }
 

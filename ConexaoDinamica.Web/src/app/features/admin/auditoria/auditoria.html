@@ -130,6 +130,23 @@
             }
           }
 
+          <!--
+            Partes removidas. Sem esta seção, o diff registrava só o id
+            ("Itens[15]: existente -> removido") e o conteúdo do que foi apagado
+            não sobrevivia em lugar nenhum do evento.
+          -->
+          @for (colecao of chavesDe(evento.partesRemovidas); track colecao) {
+            <h4 class="removidos">{{ colecao }} removidos</h4>
+            @for (parte of evento.partesRemovidas[colecao]; track $index) {
+              <dl class="snapshot parte removida">
+                @for (par of paresDe(parte); track par.chave) {
+                  <dt>{{ par.chave }}</dt>
+                  <dd>{{ par.valor }}</dd>
+                }
+              </dl>
+            }
+          }
+
           <div class="rodape">
             @if (evento.origem?.ip) {
               <span class="meta">origem: {{ evento.origem!.ip }}</span>

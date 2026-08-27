@@ -79,6 +79,28 @@ namespace ConexaoDinamica.Application.Auditoria
         /// Só a raiz do agregado tem evento próprio; as partes vivem aqui dentro.
         /// </summary>
         public Dictionary<string, List<Dictionary<string, object?>>> Partes { get; set; } = [];
+
+        /// <summary>
+        /// Partes que SAÍRAM do agregado nesta operação, com o último estado que
+        /// tinham antes de sumir.
+        ///
+        /// ── Por que não basta o diff ─────────────────────────────────────────
+        /// A saída de uma parte é registrada em Alteracoes como
+        /// "Itens[15]: existente -> removido", e "existente" ali é um texto fixo,
+        /// não um valor. Sem este campo, a descrição, a quantidade e o preço do
+        /// item apagado não sobreviviam em lugar nenhum do evento: para saber o
+        /// que se perdeu era preciso caçar um evento anterior do mesmo pedido e
+        /// torcer para que ele ainda existisse.
+        ///
+        /// Isso contrariava a própria política da trilha — adição e remoção
+        /// guardam o estado completo. Valia para a raiz e não valia para as partes.
+        ///
+        /// Fica separado de Partes, e não misturado com uma flag, porque as duas
+        /// respondem perguntas diferentes: Partes é "como está", esta é "o que
+        /// deixou de estar". Juntá-las obrigaria todo leitor a filtrar antes de
+        /// entender o estado atual.
+        /// </summary>
+        public Dictionary<string, List<Dictionary<string, object?>>> PartesRemovidas { get; set; } = [];
     }
 
     /// <summary>Qual entidade o evento descreve.</summary>

@@ -110,6 +110,8 @@ export interface EventoAuditoria {
   referencias: Record<string, { id: string; descricao: string | null }>;
   /** Partes do agregado, agrupadas pelo nome da coleção (ex.: "Itens"). */
   partes: Record<string, Record<string, unknown>[]>;
+  /** Partes que saíram do agregado, com o último estado antes de sumir. */
+  partesRemovidas: Record<string, Record<string, unknown>[]>;
 }
 
 export interface ResultadoPaginado<T> {
