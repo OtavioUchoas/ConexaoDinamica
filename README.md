@@ -113,9 +113,10 @@ idempotente, então quem perder o cartão não tem como pedir de novo.
 - [ ] **Índice TTL para visualizações.** É o tipo de evento que mais infla a trilha
       e o que envelhece mais rápido. Um campo `expiraEm` preenchido só nelas deixa o
       Mongo expirar sozinho, sem separar em coleções
-- [ ] **Admin de bootstrap fora do `appsettings.json`.** O hash BCrypt está
-      versionado, e a senha atual é fraca. O caminho é o mesmo do `Jwt:Secret`:
-      `user-secrets` em desenvolvimento, variável de ambiente em produção
+- [x] **Admin de bootstrap fora do `appsettings.json`.** Resolvido neste branch:
+      `SenhaHash` nasce vazio e vai para `user-secrets`, como o `Jwt:Secret`. No
+      `master` continua em aberto — lá o hash versionado é dívida conhecida, aqui
+      seria uma senha de administrador igual em todo projeto gerado
 
 ## Rodando
 
