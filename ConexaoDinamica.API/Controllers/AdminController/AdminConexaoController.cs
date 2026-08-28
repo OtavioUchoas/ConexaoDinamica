@@ -1,3 +1,4 @@
+using ConexaoDinamica.Application.AplicationInterfaces.Auditoria;
 using ConexaoDinamica.Application.AplicationInterfaces.Configuracoes;
 using ConexaoDinamica.Application.Dtos.AdminDtos;
 using Microsoft.AspNetCore.Authorization;
@@ -20,6 +21,16 @@ namespace ConexaoDinamica.API.Controllers.AdminController
     ///
     /// O login (AdminControllers) fica de fora dessa proteção, por motivo óbvio:
     /// é onde o token é obtido.
+    ///
+    /// ── Sobre a auditoria ─────────────────────────────────────────────────────
+    /// Só as ações que MUDAM alguma coisa geram evento: salvar conexão e aplicar
+    /// migrations. Consultar a configuração e testar uma conexão ficam no log —
+    /// não alteram nada e, sendo o painel do administrador, cada abertura de tela
+    /// dispararia um evento sem fato correspondente.
+    ///
+    /// Nenhum evento leva senha. O log desta classe já seguia essa regra; a
+    /// trilha, que é mais duradoura e costuma ter acesso mais amplo, segue com
+    /// mais razão ainda.
     /// </summary>
     [ApiController]
     [Route("api/v1/admin/conexao")]
@@ -28,13 +39,16 @@ namespace ConexaoDinamica.API.Controllers.AdminController
     public class AdminConexaoController : ControllerBase
     {
         private readonly IConexaoAdminService _conexaoAdminService;
+        private readonly IAuditoriaService _auditoria;
         private readonly ILogger<AdminConexaoController> _logger;
 
         public AdminConexaoController(
             IConexaoAdminService conexaoAdminService,
+            IAuditoriaService auditoria,
             ILogger<AdminConexaoController> logger)
         {
             _conexaoAdminService = conexaoAdminService;
+            _auditoria = auditoria;
             _logger = logger;
         }
 
@@ -92,13 +106,33 @@ namespace ConexaoDinamica.API.Controllers.AdminController
         [ProducesResponseType(typeof(ConexaoPostgresResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public IActionResult SalvarPostgres([FromBody] ConexaoPostgresRequest request)
+        public async Task<IActionResult> SalvarPostgres(
+            [FromBody] ConexaoPostgresRequest request,
+            CancellationToken cancellationToken)
         {
+            // Lido ANTES de salvar: depois de gravar, a configuração anterior não
+            // existe mais em lugar nenhum, e "para onde apontava antes" é metade
+            // do que se quer saber ao investigar uma troca de banco.
+            var anterior = _conexaoAdminService.ObterConfiguracao();
+
             var salva = _conexaoAdminService.Salvar(request);
 
             _logger.LogWarning(
                 "Conexão do Postgres alterada para {Host}:{Porta}/{Database}",
                 salva.Host, salva.Porta, salva.Database);
+
+            await _auditoria.RegistrarConfiguracaoAsync(
+                "ConexaoPostgres",
+                new Dictionary<string, object?>
+                {
+                    ["Host"] = salva.Host,
+                    ["Porta"] = salva.Porta,
+                    ["Database"] = salva.Database,
+                    ["Usuario"] = salva.Usuario,
+                    ["SenhaDefinida"] = salva.SenhaDefinida,
+                    ["Anterior"] = Descrever(anterior?.Host, anterior?.Porta, anterior?.Database),
+                },
+                cancellationToken);
 
             return Ok(salva);
         }
@@ -132,6 +166,25 @@ namespace ConexaoDinamica.API.Controllers.AdminController
             var resultado = await _conexaoAdminService.AplicarMigrationsAsync(cancellationToken);
 
             _logger.LogWarning("Aplicação de migrations solicitada -> {Mensagem}", resultado.Mensagem);
+
+            // A tentativa é registrada mesmo quando falha, ao contrário do que se
+            // faz na exportação. Lá o evento afirma que dados saíram, e afirmá-lo
+            // sem que tenham saído seria falso; aqui o fato auditável é a ordem
+            // dada — alguém mandou alterar o esquema do banco, e o resultado é
+            // parte do registro, não condição para ele existir.
+            await _auditoria.RegistrarConfiguracaoAsync(
+                "Migrations",
+                new Dictionary<string, object?>
+                {
+                    ["Sucesso"] = resultado.Sucesso,
+                    ["Mensagem"] = resultado.Mensagem,
+                    ["Aplicadas"] = string.Join(", ", resultado.Aplicadas),
+
+                    // Só o fato de ter sido criado. A senha provisória aparece uma
+                    // única vez na resposta e não pode ficar guardada na trilha.
+                    ["SuperUsuarioCriado"] = resultado.SuperUsuario is not null,
+                },
+                cancellationToken);
 
             // Aqui, diferente do teste de conexão, a falha É um erro: o
             // administrador mandou executar uma ação e ela não aconteceu.
@@ -190,15 +243,52 @@ namespace ConexaoDinamica.API.Controllers.AdminController
         [ProducesResponseType(typeof(ConexaoMongoResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public IActionResult SalvarMongo([FromBody] ConexaoMongoRequest request)
+        public async Task<IActionResult> SalvarMongo(
+            [FromBody] ConexaoMongoRequest request,
+            CancellationToken cancellationToken)
         {
+            var anterior = _conexaoAdminService.ObterConfiguracaoMongo();
+
             var salva = _conexaoAdminService.SalvarMongo(request);
 
             _logger.LogWarning(
                 "Conexão do MongoDB alterada para {Host}:{Porta}/{Database}",
                 salva.Host, salva.Porta, salva.Database);
 
+            // Este evento é diferente de todos os outros: ele muda o lugar onde a
+            // própria trilha é gravada, e por ser registrado DEPOIS da troca, cai
+            // no destino novo. É intencional — a trilha nova nasce dizendo de onde
+            // veio e quem a trouxe.
+            //
+            // A contrapartida é honesta: a trilha antiga termina sem explicação.
+            // Fechá-la exigiria gravar nos dois bancos, e o campo "Anterior" aqui
+            // dá o caminho de volta para quem precisar procurar lá.
+            await _auditoria.RegistrarConfiguracaoAsync(
+                "ConexaoMongo",
+                new Dictionary<string, object?>
+                {
+                    ["Host"] = salva.Host,
+                    ["Porta"] = salva.Porta,
+                    ["Database"] = salva.Database,
+                    ["Usuario"] = salva.Usuario,
+                    ["AuthSource"] = salva.AuthSource,
+                    ["SenhaDefinida"] = salva.SenhaDefinida,
+                    ["Anterior"] = Descrever(anterior?.Host, anterior?.Porta, anterior?.Database),
+                },
+                cancellationToken);
+
             return Ok(salva);
         }
+
+        /// <summary>
+        /// Resume um destino em uma linha ("localhost:5432/conexao"), para o campo
+        /// "Anterior" dos eventos de configuração. Devolve "não configurado" quando
+        /// não havia nada antes — a primeira configuração também é um fato, e
+        /// deixar o campo vazio a tornaria indistinguível de uma falha de captura.
+        /// </summary>
+        private static string Descrever(string? host, int? porta, string? database) =>
+            string.IsNullOrWhiteSpace(host)
+                ? "não configurado"
+                : $"{host}:{porta}/{database}";
     }
 }

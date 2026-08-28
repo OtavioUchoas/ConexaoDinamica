@@ -41,6 +41,27 @@ namespace ConexaoDinamica.Application.Auditoria
         /// o identificador informado, que é justamente o material de uma
         /// investigação de tentativa de invasão.
         /// </summary>
-        FalhaAutenticacao = 7
+        FalhaAutenticacao = 7,
+
+        /// <summary>
+        /// Mudança na infraestrutura da aplicação: para onde ela aponta e qual o
+        /// esquema do banco.
+        /// </summary>
+        ///
+        /// <remarks>
+        /// Não passa pelo interceptor porque não é uma linha do Postgres — a
+        /// configuração vive no LiteDB local, fora de qualquer DbContext.
+        ///
+        /// É o evento com o maior alcance da trilha. Trocar a conexão do Postgres
+        /// substitui TODOS os dados que o sistema enxerga, sem alterar registro
+        /// nenhum; trocar a do Mongo redireciona a própria trilha. Sem este
+        /// registro, as duas ações mais graves que um administrador pode executar
+        /// eram as únicas que não deixavam rastro.
+        ///
+        /// O evento guarda para onde a aplicação passou a apontar — host, porta,
+        /// banco, usuário. Nunca a senha: uma trilha não pode virar fonte
+        /// alternativa de credenciais.
+        /// </remarks>
+        Configuracao = 8
     }
 }

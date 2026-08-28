@@ -100,5 +100,34 @@ namespace ConexaoDinamica.Application.AplicationInterfaces.Auditoria
             string identificador,
             string motivo,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Registra uma mudança de infraestrutura: conexão de banco, migrations.
+        ///
+        /// A configuração vive no LiteDB local, fora de qualquer DbContext, então
+        /// o interceptor nunca a vê. E são as ações de maior alcance do sistema:
+        /// apontar o Postgres para outro servidor troca todos os dados que a
+        /// aplicação enxerga sem alterar um único registro.
+        ///
+        /// ── Sobre a troca da conexão do Mongo ─────────────────────────────────
+        /// O evento é gravado no banco que estiver valendo NO MOMENTO DA CHAMADA.
+        /// Registrar depois de trocar grava no destino novo — que é o que se quer:
+        /// a trilha nova começa dizendo de onde veio e quem a trouxe. A trilha
+        /// antiga fica com uma lacuna no fim, e fechá-la exigiria gravar nos dois
+        /// bancos; a continuidade para a frente vale mais.
+        /// </summary>
+        /// <param name="alvo">
+        /// O que foi configurado — "ConexaoPostgres", "ConexaoMongo", "Migrations".
+        /// Vira o identificador do registro na trilha.
+        /// </param>
+        /// <param name="detalhes">
+        /// Para onde a aplicação passou a apontar. NUNCA inclua senha: a trilha
+        /// costuma ter controle de acesso mais frouxo que a configuração em si, e
+        /// não pode virar uma fonte alternativa de credenciais.
+        /// </param>
+        Task RegistrarConfiguracaoAsync(
+            string alvo,
+            IReadOnlyDictionary<string, object?> detalhes,
+            CancellationToken cancellationToken = default);
     }
 }

@@ -129,6 +129,35 @@ namespace ConexaoDinamica.Infrastructure.Auditoria
             return _repository.RegistrarAsync([evento], cancellationToken);
         }
 
+        public Task RegistrarConfiguracaoAsync(
+            string alvo,
+            IReadOnlyDictionary<string, object?> detalhes,
+            CancellationToken cancellationToken = default)
+        {
+            var evento = new EventoAuditoria
+            {
+                TipoEvento = TipoEventoAuditoria.Configuracao,
+                CorrelationId = _contexto.ObterCorrelationId(),
+                Usuario = _contexto.ObterUsuario(),
+                Origem = _contexto.ObterOrigem(),
+                Entidade = new EntidadeAuditada
+                {
+                    // A configuração não é um registro de banco, mas na trilha
+                    // precisa de tipo e id como qualquer outro fato — é o que
+                    // permite filtrar "tudo que já foi feito na conexão do Mongo".
+                    Tipo = "Configuracao",
+                    Id = alvo
+                },
+
+                // Vai no Snapshot, e não em Alteracoes: o estado anterior nem
+                // sempre existe (a primeira configuração não tem "de"), e quando
+                // existe entra como um campo do próprio retrato.
+                Snapshot = new Dictionary<string, object?>(detalhes)
+            };
+
+            return _repository.RegistrarAsync([evento], cancellationToken);
+        }
+
         /// <summary>
         /// A "entidade" de um evento de autenticação é a tentativa, não o usuário.
         ///

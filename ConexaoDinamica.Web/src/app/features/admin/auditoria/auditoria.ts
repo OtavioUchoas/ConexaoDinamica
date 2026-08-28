@@ -71,6 +71,7 @@ export class Auditoria {
     'Exportacao',
     'Autenticacao',
     'FalhaAutenticacao',
+    'Configuracao',
   ];
 
   protected filtro: FiltroAuditoria = { pagina: 1, tamanhoPagina: 25 };
@@ -225,6 +226,7 @@ export class Auditoria {
       Exportacao: 'download',
       Autenticacao: 'login',
       FalhaAutenticacao: 'gpp_bad',
+      Configuracao: 'settings',
     }[tipo];
   }
 
