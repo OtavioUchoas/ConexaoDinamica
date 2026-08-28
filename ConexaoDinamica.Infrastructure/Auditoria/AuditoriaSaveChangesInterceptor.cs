@@ -6,6 +6,7 @@ using ConexaoDinamica.Domain.Auditoria;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace ConexaoDinamica.Infrastructure.Auditoria
 {
@@ -36,20 +37,39 @@ namespace ConexaoDinamica.Infrastructure.Auditoria
     /// ── Por que scoped ───────────────────────────────────────────────────────
     /// A classe guarda estado entre as duas chamadas. Como singleton, requisições
     /// simultâneas embaralhariam os eventos umas das outras.
+    ///
+    /// ── A auditoria nunca derruba a operação de negócio ───────────────────────
+    /// As duas fases são blindadas, mas por motivos diferentes.
+    ///
+    /// Na fase 2 é uma questão de correção: ela roda DEPOIS do commit, com o dado
+    /// já gravado e sem volta. Uma exceção escapando dali sobe pelo SaveChangesAsync
+    /// e chega ao chamador como se a operação tivesse falhado — quando ela deu
+    /// certo. O caso concreto é DesnormalizarReferenciasAsync, que consulta o banco
+    /// para resolver a descrição de uma referência.
+    ///
+    /// Na fase 1 é coerência com a política já adotada no repositório do Mongo:
+    /// perder trilha é um erro grave que vai para o log, não uma razão para
+    /// impedir o usuário de trabalhar.
+    ///
+    /// Em ambos os casos a falha é registrada em nível Error — alguém precisa
+    /// investigar, mesmo que ninguém tenha percebido nada.
     /// </summary>
     public class AuditoriaSaveChangesInterceptor : SaveChangesInterceptor
     {
         private readonly IAuditoriaRepository _auditoriaRepository;
         private readonly IContextoAuditoria _contexto;
+        private readonly ILogger<AuditoriaSaveChangesInterceptor> _logger;
 
         private readonly List<EventoPendente> _pendentes = [];
 
         public AuditoriaSaveChangesInterceptor(
             IAuditoriaRepository auditoriaRepository,
-            IContextoAuditoria contexto)
+            IContextoAuditoria contexto,
+            ILogger<AuditoriaSaveChangesInterceptor> logger)
         {
             _auditoriaRepository = auditoriaRepository;
             _contexto = contexto;
+            _logger = logger;
         }
 
         /// <summary>Parte de agregado coletada, à espera da chave definitiva.</summary>
@@ -77,11 +97,31 @@ namespace ConexaoDinamica.Infrastructure.Auditoria
             if (eventData.Context is null)
                 return ValueTask.FromResult(result);
 
+            try
+            {
+                Coletar(eventData.Context);
+            }
+            catch (Exception ex)
+            {
+                // Descarta o que já tinha entrado na lista: publicar uma coleta
+                // interrompida no meio deixaria na trilha um evento que afirma um
+                // fato incompleto sem avisar que está incompleto.
+                _pendentes.Clear();
+
+                _logger.LogError(ex,
+                    "Falha ao coletar os eventos de auditoria. A operação seguirá sem trilha.");
+            }
+
+            return ValueTask.FromResult(result);
+        }
+
+        private void Coletar(DbContext contexto)
+        {
             var usuario = _contexto.ObterUsuario();
             var origem = _contexto.ObterOrigem();
             var correlationId = _contexto.ObterCorrelationId();
 
-            var entries = eventData.Context.ChangeTracker.Entries()
+            var entries = contexto.ChangeTracker.Entries()
                 .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
                 .ToList();
 
@@ -120,8 +160,6 @@ namespace ConexaoDinamica.Infrastructure.Auditoria
 
                 _pendentes.Add(new EventoPendente(evento, entry, partes));
             }
-
-            return ValueTask.FromResult(result);
         }
 
         /// <summary>
@@ -156,25 +194,59 @@ namespace ConexaoDinamica.Infrastructure.Auditoria
             if (_pendentes.Count == 0)
                 return result;
 
+            var eventos = new List<EventoAuditoria>(_pendentes.Count);
+
+            // O try é por evento, e não em volta do laço inteiro, para que um
+            // agregado problemático — uma referência que não resolve, uma chave
+            // inesperada — não leve junto os outros eventos do mesmo SaveChanges.
             foreach (var pendente in _pendentes)
             {
                 var evento = pendente.Evento;
 
-                evento.Entidade.Id = ObterChave(pendente.Raiz);
-                CorrigirChavesNoSnapshot(pendente.Raiz, evento.Snapshot);
+                try
+                {
+                    evento.Entidade.Id = ObterChave(pendente.Raiz);
+                    CorrigirChavesNoSnapshot(pendente.Raiz, evento.Snapshot);
 
-                IncorporarPartes(pendente, evento);
+                    IncorporarPartes(pendente, evento);
 
-                await DesnormalizarReferenciasAsync(pendente.Raiz, evento, cancellationToken);
+                    await DesnormalizarReferenciasAsync(pendente.Raiz, evento, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    // O evento é publicado assim mesmo, com o que deu para
+                    // resolver. É a mesma escolha já feita em
+                    // DesnormalizarReferenciasAsync: auditoria incompleta é melhor
+                    // que auditoria ausente — o registro do fato continua valendo
+                    // mesmo sem a descrição de uma referência.
+                    _logger.LogError(ex,
+                        "Falha ao resolver o evento de auditoria de {Entidade}. " +
+                        "O evento será gravado com os dados que puderam ser apurados.",
+                        evento.Entidade.Tipo);
+                }
+
+                eventos.Add(evento);
             }
 
-            var eventos = _pendentes.Select(p => p.Evento).ToList();
             _pendentes.Clear();
 
-            // Aguardado, e não disparado em segundo plano: sem o await, o escopo do
-            // DI poderia ser descartado com a gravação ainda em curso. O repositório
-            // não propaga exceções — a falha vira log e a operação de negócio segue.
-            await _auditoriaRepository.RegistrarAsync(eventos, cancellationToken);
+            try
+            {
+                // Aguardado, e não disparado em segundo plano: sem o await, o escopo
+                // do DI poderia ser descartado com a gravação ainda em curso.
+                //
+                // O repositório já engole as próprias falhas; este catch cobre o que
+                // vier de fora dele (o provider do Mongo ao montar o client, por
+                // exemplo) e garante a regra que vale para todo este método: nada
+                // que aconteça depois do commit vira erro para o chamador.
+                await _auditoriaRepository.RegistrarAsync(eventos, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Falha ao publicar a auditoria. {Quantidade} evento(s) perdido(s).",
+                    eventos.Count);
+            }
 
             return result;
         }
