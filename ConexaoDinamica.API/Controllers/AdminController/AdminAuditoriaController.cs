@@ -17,6 +17,12 @@ namespace ConexaoDinamica.API.Controllers.AdminController
     /// Por isso ela não é apenas "mais uma listagem" — é informação privilegiada,
     /// e o controle de acesso aqui precisa ser pelo menos tão restrito quanto o
     /// dos dados originais.
+    ///
+    /// ── Por que a consulta também é auditada ──────────────────────────────────
+    /// Pela mesma razão: se ler a trilha equivale a ler o sistema inteiro, então
+    /// registrar só a exportação deixava passar exatamente o mesmo acesso, feito
+    /// pela tela em vez do arquivo. Consultar aqui gera um evento em
+    /// "TrilhaAuditoria", como já acontecia ao exportar.
     /// </summary>
     [ApiController]
     [Route("api/v1/admin/auditoria")]
@@ -74,7 +80,15 @@ namespace ConexaoDinamica.API.Controllers.AdminController
 
             try
             {
-                return Ok(await _auditoria.ConsultarAsync(filtro, cancellationToken));
+                var resultado = await _auditoria.ConsultarAsync(filtro, cancellationToken);
+
+                // Registrado depois de consultar, com o resultado em mãos: antes,
+                // não haveria o que dizer sobre o alcance do acesso, e uma consulta
+                // que falhasse deixaria na trilha uma leitura que não aconteceu.
+                await _auditoriaService.RegistrarConsultaTrilhaAsync(
+                    filtro.Descrever(), resultado.Pagina, resultado.Total, cancellationToken);
+
+                return Ok(resultado);
             }
             catch (InvalidOperationException)
             {

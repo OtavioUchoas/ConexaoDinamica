@@ -129,5 +129,37 @@ namespace ConexaoDinamica.Application.AplicationInterfaces.Auditoria
             string alvo,
             IReadOnlyDictionary<string, object?> detalhes,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Registra que alguém consultou a própria trilha.
+        ///
+        /// ── Por que isto vale a exceção à regra ───────────────────────────────
+        /// A regra documentada acima diz para não auditar listagem. Esta é a
+        /// listagem que a regra não previa: a trilha é uma via alternativa de
+        /// leitura de todo o sistema — quem consulta a auditoria de um cliente vê
+        /// os dados dele sem ter permissão sobre clientes. Auditar a exportação e
+        /// não a consulta deixava passar o mesmo acesso, só que mais devagar.
+        ///
+        /// O motivo de volume também não se aplica: a tela é restrita a
+        /// administradores, então são dezenas de eventos por dia, não milhares.
+        ///
+        /// ── O ruído que isto cria, e o que fazer com ele ──────────────────────
+        /// Consultar a trilha grava na trilha, então navegar por ela produz
+        /// eventos que aparecem na navegação seguinte. É um efeito real e
+        /// inevitável se a consulta vai ser auditada. Ele fica contido porque o
+        /// evento usa o tipo "TrilhaAuditoria": filtrar por qualquer outra
+        /// entidade já o remove da tela.
+        ///
+        /// Registra o CRITÉRIO e o volume, como a exportação — nunca os registros
+        /// que apareceram.
+        /// </summary>
+        /// <param name="criterio">Filtros aplicados, em texto legível.</param>
+        /// <param name="pagina">Página consultada.</param>
+        /// <param name="totalEncontrado">Quantos eventos o filtro alcança, no total.</param>
+        Task RegistrarConsultaTrilhaAsync(
+            string criterio,
+            int pagina,
+            long totalEncontrado,
+            CancellationToken cancellationToken = default);
     }
 }

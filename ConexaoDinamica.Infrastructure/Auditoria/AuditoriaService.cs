@@ -129,6 +129,41 @@ namespace ConexaoDinamica.Infrastructure.Auditoria
             return _repository.RegistrarAsync([evento], cancellationToken);
         }
 
+        public Task RegistrarConsultaTrilhaAsync(
+            string criterio,
+            int pagina,
+            long totalEncontrado,
+            CancellationToken cancellationToken = default)
+        {
+            var evento = new EventoAuditoria
+            {
+                // Visualizacao, e não um tipo novo: consultar a trilha é ler, e o
+                // que distingue este evento dos demais já é a entidade. Exportacao
+                // tem tipo próprio porque faz outra coisa — tira os dados do
+                // alcance do controle de acesso.
+                TipoEvento = TipoEventoAuditoria.Visualizacao,
+                CorrelationId = _contexto.ObterCorrelationId(),
+                Usuario = _contexto.ObterUsuario(),
+                Origem = _contexto.ObterOrigem(),
+                Entidade = new EntidadeAuditada
+                {
+                    Tipo = "TrilhaAuditoria",
+                    Id = "*"
+                },
+                Snapshot = new Dictionary<string, object?>
+                {
+                    ["Criterio"] = criterio,
+                    ["Pagina"] = pagina,
+
+                    // O total do filtro, não o tamanho da página: mostra o alcance
+                    // do que a pessoa podia ver, que é o que interessa aqui.
+                    ["TotalEncontrado"] = totalEncontrado
+                }
+            };
+
+            return _repository.RegistrarAsync([evento], cancellationToken);
+        }
+
         public Task RegistrarConfiguracaoAsync(
             string alvo,
             IReadOnlyDictionary<string, object?> detalhes,
