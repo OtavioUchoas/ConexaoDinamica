@@ -22,6 +22,7 @@ ConexaoDinamica.API             -> Controllers, Middlewares, Program
 ConexaoDinamica.Application     -> Casos de uso (Services, DTOs, Interfaces, Validators)
 ConexaoDinamica.Domain          -> Entidades e regras de domínio
 ConexaoDinamica.Infrastructure  -> EF Core, LiteDB, MongoDB, ClosedXML, Repositórios, DI
+ConexaoDinamica.Tests           -> Testes do interceptor de auditoria (xUnit + SQLite)
 ConexaoDinamica.Web             -> Frontend Angular, compilado para o wwwroot da API
 ```
 
@@ -207,9 +208,40 @@ Eventos gravados na coleção `eventos_auditoria`:
 | Remoção | `SaveChangesInterceptor` | snapshot do último estado |
 | Visualização | chamada explícita | quem acessou o quê |
 | Exportação | chamada explícita | critério da consulta e volume |
+| Autenticação | chamada explícita | quem entrou, por qual credencial |
+| Falha de autenticação | chamada explícita | identificador tentado e origem |
+| Configuração | chamada explícita | para onde a aplicação passou a apontar |
 
-Visualização e exportação são explícitas porque uma consulta não passa por
-`SaveChanges` — o interceptor não tem como enxergá-las.
+Tudo que não é adição, alteração ou remoção é explícito porque não passa por
+`SaveChanges` — o interceptor não tem como enxergar consulta, login ou uma
+configuração que vive no LiteDB.
+
+A trilha cobre três ações privilegiadas além dos dados:
+
+- **Autenticação** — sucesso e falha, para usuários e para o admin de bootstrap.
+  Falha tem tipo próprio (a pergunta "quantas tentativas falharam nesta conta?" é
+  feita sozinha) e é o único evento sem usuário: quem não autenticou não tem
+  identidade, então o que identifica é a origem. O motivo gravado não distingue
+  "conta inexistente" de "senha errada", para não devolver na trilha a enumeração
+  de contas que o 401 genérico evita. Cadastro **não** gera evento próprio: ele
+  grava um `Usuario` e o interceptor já o registra como adição.
+- **Configuração** — trocar a conexão do Postgres ou do Mongo e aplicar migrations.
+  São as ações de maior alcance do sistema: apontar o Postgres para outro servidor
+  substitui todos os dados que a aplicação enxerga sem alterar registro nenhum. O
+  evento guarda host, porta, banco, usuário e o destino anterior — **nunca a
+  senha**. O da troca do Mongo cai no destino novo: a trilha nova começa dizendo
+  de onde veio e quem a trouxe, e a antiga fica com uma lacuna no fim que o campo
+  `Anterior` permite rastrear.
+- **Consulta da trilha** — ler a auditoria é uma via alternativa de leitura de todo
+  o sistema, então registrar só a exportação deixava passar o mesmo acesso, feito
+  pela tela em vez do arquivo. Gera um evento em `TrilhaAuditoria` com o critério e
+  o alcance do filtro. Consultar a trilha grava na trilha; o ruído fica contido no
+  tipo de entidade próprio, que qualquer outro filtro remove da tela.
+
+**A auditoria nunca derruba a operação de negócio.** A fase 2 do interceptor roda
+depois do commit (é onde as referências são resolvidas, com consulta ao banco), e
+uma exceção ali reportaria como falha uma operação que deu certo. As duas fases são
+blindadas: perda de trilha vira log em nível `Error`.
 
 Visualização é registrada ao abrir o **detalhe** de um registro, nunca em
 listagens: leituras superam escritas por ordens de grandeza, e "viu uma lista onde
@@ -276,6 +308,26 @@ O teto é de **50.000 eventos por exportação**. Acima disso a resposta é 400 
 para estreitar o filtro — numa auditoria, uma planilha truncada em silêncio é pior
 que erro nenhum, porque quem analisa concluiria que os eventos ausentes não
 existiram.
+
+### Testes
+
+```bash
+dotnet test
+```
+
+Não precisa de banco, Docker nem configuração: o `ConexaoDinamica.Tests` sobe um
+SQLite em memória com o interceptor ligado e um repositório falso no lugar do Mongo.
+
+SQLite e não o provider `InMemory` por um motivo específico: o `InMemory` atribui
+as chaves no `Add`, e o ponto mais delicado do interceptor — a chave temporária
+negativa que só vira id real depois do `INSERT` — simplesmente não aconteceria. Os
+testes passariam sem exercitar a armadilha que a classe existe para contornar.
+
+Cobrem o que quebra em silêncio: a resolução da chave definitiva no snapshot, o
+`[NaoAuditar]` mantendo o hash de senha fora da trilha, o diff que ignora
+atribuição do mesmo valor, a descoberta do agregado raiz por chave estrangeira
+temporária, as partes removidas e a garantia de que uma falha de auditoria não
+chega ao chamador do `SaveChanges`.
 
 ## Frontend
 

@@ -3,4 +3,5 @@
   <Project Path="ConexaoDinamica.Application/ConexaoDinamica.Application.csproj" />
   <Project Path="ConexaoDinamica.Domain/ConexaoDinamica.Domain.csproj" />
   <Project Path="ConexaoDinamica.Infrastructure/ConexaoDinamica.Infrastructure.csproj" />
+  <Project Path="ConexaoDinamica.Tests/ConexaoDinamica.Tests.csproj" />
 </Solution>
