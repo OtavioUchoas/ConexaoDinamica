@@ -66,6 +66,10 @@ mat-panel-description {
 .tipo-Remocao { color: var(--mat-sys-error); }
 .tipo-Visualizacao { color: var(--mat-sys-on-surface-variant); }
 
+// Falha de autenticação usa a cor de erro pelo mesmo motivo da remoção: é o
+// evento que alguém precisa notar ao percorrer a lista sem estar procurando.
+.tipo-FalhaAutenticacao { color: var(--mat-sys-error); }
+
 h4 {
   margin: 1rem 0 0.5rem;
   font-size: 0.8rem;

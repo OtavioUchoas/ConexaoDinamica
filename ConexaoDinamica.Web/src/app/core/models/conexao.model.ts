@@ -91,7 +91,9 @@ export type TipoEventoAuditoria =
   | 'Alteracao'
   | 'Remocao'
   | 'Visualizacao'
-  | 'Exportacao';
+  | 'Exportacao'
+  | 'Autenticacao'
+  | 'FalhaAutenticacao';
 
 export interface AlteracaoCampo {
   campo: string;

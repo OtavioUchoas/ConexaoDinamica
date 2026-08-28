@@ -1,3 +1,5 @@
+using ConexaoDinamica.Application.Auditoria;
+
 namespace ConexaoDinamica.Application.AplicationInterfaces.Auditoria
 {
     /// <summary>
@@ -51,6 +53,52 @@ namespace ConexaoDinamica.Application.AplicationInterfaces.Auditoria
         Task RegistrarExportacaoAsync(
             string criterio,
             int quantidade,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Registra uma autenticação bem-sucedida.
+        ///
+        /// Quem autentica ainda não é o usuário da requisição — o token acabou de
+        /// ser emitido e o HttpContext continua anônimo. Por isso a identidade vem
+        /// por parâmetro em vez de sair do contexto, como acontece nos demais
+        /// eventos.
+        ///
+        /// O cadastro NÃO passa por aqui: criar usuário grava uma linha no
+        /// Postgres e o interceptor já o registra como Adicao de Usuario. Um
+        /// evento a mais só duplicaria o mesmo fato.
+        /// </summary>
+        /// <param name="credencial">
+        /// De onde veio a credencial: "Usuario" para conta do banco,
+        /// "AdminBootstrap" para o administrador de configuração. Distingue duas
+        /// portas de entrada com poderes bem diferentes.
+        /// </param>
+        /// <param name="identificador">Login ou e-mail informado.</param>
+        /// <param name="usuario">Quem entrou, já resolvido.</param>
+        Task RegistrarAutenticacaoAsync(
+            string credencial,
+            string identificador,
+            UsuarioAuditado usuario,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Registra uma tentativa de autenticação recusada.
+        ///
+        /// O evento fica sem usuário — é o único da trilha em que isso é o
+        /// esperado, e não uma falha de captura. O que identifica a tentativa é o
+        /// par (identificador informado, origem).
+        /// </summary>
+        /// <param name="credencial">"Usuario" ou "AdminBootstrap".</param>
+        /// <param name="identificador">Login ou e-mail informado na tentativa.</param>
+        /// <param name="motivo">
+        /// Por que foi recusada, no nível de detalhe que o chamador realmente tem.
+        /// Não sirva aqui o que a resposta HTTP esconde de propósito: distinguir
+        /// "conta não existe" de "senha errada" na trilha reintroduz, para quem
+        /// tiver acesso a ela, a enumeração de contas que o login evita.
+        /// </param>
+        Task RegistrarFalhaAutenticacaoAsync(
+            string credencial,
+            string identificador,
+            string motivo,
             CancellationToken cancellationToken = default);
     }
 }

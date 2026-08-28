@@ -6,9 +6,9 @@ namespace ConexaoDinamica.Infrastructure.Auditoria
     /// <summary>
     /// Registro explícito de eventos que o interceptor não captura.
     ///
-    /// Hoje cobre apenas visualização. Eventos de negócio que não se traduzem em
-    /// alteração de dados ("exportou relatório", "reenviou notificação") entram
-    /// por aqui também quando surgirem.
+    /// São os fatos que não passam por SaveChanges: leitura, saída de dados e
+    /// entrada no sistema. Eventos de negócio sem alteração de dados ("reenviou
+    /// notificação") entram por aqui também quando surgirem.
     /// </summary>
     public class AuditoriaService : IAuditoriaService
     {
@@ -77,5 +77,72 @@ namespace ConexaoDinamica.Infrastructure.Auditoria
 
             return _repository.RegistrarAsync([evento], cancellationToken);
         }
+
+        public Task RegistrarAutenticacaoAsync(
+            string credencial,
+            string identificador,
+            UsuarioAuditado usuario,
+            CancellationToken cancellationToken = default)
+        {
+            var evento = new EventoAuditoria
+            {
+                TipoEvento = TipoEventoAuditoria.Autenticacao,
+                CorrelationId = _contexto.ObterCorrelationId(),
+
+                // Vem do parâmetro, não do contexto: o token acabou de ser emitido
+                // e o HttpContext desta requisição ainda é anônimo.
+                Usuario = usuario,
+                Origem = _contexto.ObterOrigem(),
+                Entidade = MontarEntidadeAutenticacao(identificador),
+                Snapshot = new Dictionary<string, object?>
+                {
+                    ["Credencial"] = credencial
+                }
+            };
+
+            return _repository.RegistrarAsync([evento], cancellationToken);
+        }
+
+        public Task RegistrarFalhaAutenticacaoAsync(
+            string credencial,
+            string identificador,
+            string motivo,
+            CancellationToken cancellationToken = default)
+        {
+            var evento = new EventoAuditoria
+            {
+                TipoEvento = TipoEventoAuditoria.FalhaAutenticacao,
+                CorrelationId = _contexto.ObterCorrelationId(),
+
+                // Sem usuário de propósito: ninguém autenticou. A identificação
+                // possível é a origem, abaixo, com o identificador tentado.
+                Usuario = null,
+                Origem = _contexto.ObterOrigem(),
+                Entidade = MontarEntidadeAutenticacao(identificador),
+                Snapshot = new Dictionary<string, object?>
+                {
+                    ["Credencial"] = credencial,
+                    ["Motivo"] = motivo
+                }
+            };
+
+            return _repository.RegistrarAsync([evento], cancellationToken);
+        }
+
+        /// <summary>
+        /// A "entidade" de um evento de autenticação é a tentativa, não o usuário.
+        ///
+        /// Poderia ser o Usuario que entrou, mas isso misturaria na trilha dele
+        /// dois tipos de identificador: o id numérico dos eventos de dados e o
+        /// e-mail das tentativas recusadas, que sequer têm usuário. Com tipo
+        /// próprio, "toda a atividade de login" e "todo o histórico do usuário 42"
+        /// continuam sendo duas consultas distintas — e ambas simples.
+        /// </summary>
+        private static EntidadeAuditada MontarEntidadeAutenticacao(string identificador) =>
+            new()
+            {
+                Tipo = "Autenticacao",
+                Id = identificador
+            };
     }
 }

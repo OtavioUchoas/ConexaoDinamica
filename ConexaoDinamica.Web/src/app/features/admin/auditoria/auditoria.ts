@@ -69,6 +69,8 @@ export class Auditoria {
     'Remocao',
     'Visualizacao',
     'Exportacao',
+    'Autenticacao',
+    'FalhaAutenticacao',
   ];
 
   protected filtro: FiltroAuditoria = { pagina: 1, tamanhoPagina: 25 };
@@ -221,6 +223,8 @@ export class Auditoria {
       Remocao: 'delete',
       Visualizacao: 'visibility',
       Exportacao: 'download',
+      Autenticacao: 'login',
+      FalhaAutenticacao: 'gpp_bad',
     }[tipo];
   }
 
